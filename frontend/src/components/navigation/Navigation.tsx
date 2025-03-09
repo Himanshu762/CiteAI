@@ -352,7 +352,7 @@ export const DashboardNavbar = () => {
     <nav className="fixed top-0 w-full bg-neutral dark:bg-primary shadow-sm z-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between py-3">
         <div className="flex items-center space-x-8">
-          <Link to="/" className="flex items-center space-x-3">
+          <Link to="/" className="flex items-center space-x-24">
             <Logo className="h-8 w-8" />
           </Link>
           <div className="hidden lg:flex space-x-6">
