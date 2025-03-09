@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc --noEmit && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "postinstall": "npx shadcn-ui@latest init"
@@ -51,7 +51,8 @@
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
     "y-webrtc": "^10.3.0",
-    "yjs": "^13.6.24"
+    "yjs": "^13.6.24",
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
