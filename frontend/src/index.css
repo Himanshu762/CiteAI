@@ -1,0 +1,218 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Reset to remove all default margins and padding */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@layer base {
+  html {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  body, #root {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+  
+  body {
+    @apply bg-gray-50 dark:bg-gray-900;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  :root {
+    /* Academic Futurist Theme Colors */
+    --background: 210 30% 98%;  /* #F5F7FA (neutral) */
+    --foreground: 210 26% 24%;  /* #2B3A4E (primary) */
+    --border: 210 18% 88%;      /* #E5E9EF (light gray) */
+    --input: 210 18% 88%;       /* #E5E9EF (light gray) */
+    --ring: 210 26% 24%;        /* #2B3A4E (primary) */
+    --card: 0 0% 100%;          /* White */
+    --card-foreground: 210 26% 24%; /* #2B3A4E (primary) */
+    --popover: 0 0% 100%;       /* White */
+    --popover-foreground: 210 26% 24%; /* #2B3A4E (primary) */
+    --primary: 210 26% 24%;     /* #2B3A4E (primary) */
+    --primary-foreground: 0 0% 100%; /* White */
+    --secondary: 204 17% 46%;   /* #5F7A8A (secondary) */
+    --secondary-foreground: 0 0% 100%; /* White */
+    --muted: 210 18% 96%;       /* #F5F7FA (neutral) */
+    --muted-foreground: 204 17% 46%; /* #5F7A8A (secondary) */
+    --accent: 174 56% 56%;      /* #4ECDC4 (accent) */
+    --accent-foreground: 0 0% 100%; /* White */
+    --destructive: 0 100% 71%;  /* #FF6B6B (alert) */
+    --destructive-foreground: 0 0% 100%; /* White */
+    --chart-1: 174 56% 56%;     /* #4ECDC4 (teal) */
+    --chart-2: 204 17% 46%;     /* #5F7A8A (steel blue) */
+    --chart-3: 210 26% 24%;     /* #2B3A4E (deep navy) */
+    --chart-4: 0 100% 71%;      /* #FF6B6B (coral) */
+    --chart-5: 36 100% 64%;     /* #FFB347 (amber) */
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 210 26% 24%;  /* #2B3A4E (primary) */
+    --foreground: 210 30% 98%;  /* #F5F7FA (neutral) */
+    --card: 210 26% 18%;        /* #1C2736 (darker navy) */
+    --card-foreground: 210 30% 98%; /* #F5F7FA (neutral) */
+    --popover: 210 26% 18%;     /* #1C2736 (darker navy) */
+    --popover-foreground: 210 30% 98%; /* #F5F7FA (neutral) */
+    --primary: 210 30% 90%;     /* Lighter version of neutral */
+    --primary-foreground: 210 26% 24%; /* #2B3A4E (primary) */
+    --secondary: 204 17% 36%;   /* #4D6271 (darker steel blue) */
+    --secondary-foreground: 210 30% 98%; /* #F5F7FA (neutral) */
+    --muted: 210 26% 28%;       /* Slightly lighter navy */
+    --muted-foreground: 210 12% 80%; /* Light gray with less saturation */
+    --accent: 174 56% 45%;      /* #31ADA5 (darker teal) */
+    --accent-foreground: 210 30% 98%; /* #F5F7FA (neutral) */
+    --destructive: 0 80% 50%;   /* Darker coral */
+    --destructive-foreground: 210 30% 98%; /* #F5F7FA (neutral) */
+    --border: 210 26% 30%;      /* Slightly lighter navy for borders */
+    --input: 210 26% 30%;       /* Slightly lighter navy for inputs */
+    --ring: 174 56% 56%;        /* #4ECDC4 (accent teal) */
+    --chart-1: 174 56% 60%;     /* Brighter teal */
+    --chart-2: 204 17% 70%;     /* Brighter steel blue */
+    --chart-3: 210 30% 70%;     /* Brighter navy */
+    --chart-4: 0 100% 80%;      /* Brighter coral */
+    --chart-5: 36 100% 75%;     /* Brighter amber */
+  }
+}
+
+@layer components {
+  .full-screen {
+    min-height: 100vh;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .full-width-container {
+    width: 100%;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+  
+  @screen md {
+    .full-width-container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+  
+  @screen lg {
+    .full-width-container {
+      padding-left: 4rem;
+      padding-right: 4rem;
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+}
+
+@layer utilities {
+  .no-horizontal-gap {
+    width: 100vw;
+    max-width: 100vw;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+}
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
