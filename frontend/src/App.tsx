@@ -148,26 +148,13 @@ const App = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleAddCitation = () => {
-    if (newCitation.trim()) {
-      setCitations([...citations, { id: Date.now().toString(), text: newCitation.trim() }]);
-      setNewCitation('');
-    }
-  };
-
-  const handleRemoveCitation = (_: React.MouseEvent, i: number) => {
-    const newCitations = [...citations];
-    newCitations.splice(i, 1);
-    setCitations(newCitations);
-  };
-
   useEffect(() => {
     const count = Object.values(paperSections).reduce((acc, content) => 
       acc + (content ? content.split(/\s+/).length : 0), 0);
     setWordCount(count);
   }, [paperSections]);
 
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode] = useState(false);
 
   return (
     <div className="flex flex-col min-h-screen w-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">

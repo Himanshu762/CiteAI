@@ -1,28 +1,22 @@
 import { create } from 'zustand';
+import { Paper } from '../../types';
 
-interface Paper {
-  id: string;
-  title: string;
-  content: string;
-  citations: Citation[];
-}
-
-interface Citation {
-  id: string;
-  source: string;
-  page?: number;
-}
-
-interface PaperStore {
+interface PaperState {
   papers: Paper[];
   addPaper: (paper: Paper) => void;
-  updatePaper: (id: string, content: string) => void;
+  updatePaperContent: (id: string, content: string) => void;
 }
 
-export const usePaperStore = create<PaperStore>((set) => ({
+export const usePaperStore = create<PaperState>((set) => ({
   papers: [],
-  addPaper: (paper) => set((state) => ({ papers: [...state.papers, paper] })),
-  updatePaper: (id, content) => set((state) => ({
-    papers: state.papers.map(p => p.id === id ? { ...p, content } : p)
-  }))
+  addPaper: (paper: Paper) => 
+    set((state: PaperState) => ({ 
+      papers: [...state.papers, paper] 
+    })),
+  updatePaperContent: (id: string, content: string) =>
+    set((state: PaperState) => ({
+      papers: state.papers.map((p: Paper) =>
+        p.id === id ? { ...p, content } : p
+      ),
+    })),
 }));
