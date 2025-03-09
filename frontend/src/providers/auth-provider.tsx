@@ -1,9 +1,20 @@
-import { ClerkProvider } from "@clerk/clerk-react"
+import React, { ReactNode } from 'react';
+import { ClerkProvider } from '@clerk/clerk-react';
 
-export const AuthProvider = ({ children }) => {
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+  if (!clerkPubKey) {
+    throw new Error('Missing Clerk Publishable Key');
+  }
+
   return (
     <ClerkProvider
-      publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+      publishableKey={clerkPubKey}
       appearance={{
         variables: {
           colorPrimary: '#6366f1',
@@ -17,5 +28,5 @@ export const AuthProvider = ({ children }) => {
     >
       {children}
     </ClerkProvider>
-  )
-} 
+  );
+}; 
