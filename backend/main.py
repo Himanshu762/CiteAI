@@ -20,10 +20,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS Configuration
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["https://citeai.vercel.app"],  # Replace with your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
