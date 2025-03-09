@@ -1,5 +1,6 @@
 import React from 'react';
 import { DashboardNavbar, DashboardSidebar } from "../navigation/Navigation";
+import { BottomDock } from "../navigation/BottomDock";
 
 type DashboardLayoutProps = {
   children: React.ReactNode
@@ -8,7 +9,7 @@ type DashboardLayoutProps = {
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => (
   <div className="flex flex-col w-full min-h-screen bg-neutral dark:bg-primary-900">
     <DashboardNavbar />
-    <div className="flex-1 flex pt-16 w-full">
+    <div className="flex-1 flex pt-20 w-full pb-16 md:pb-0">
       {/* Hide sidebar on small screens, show on medium and up */}
       <div className="hidden md:block">
         <DashboardSidebar />
@@ -19,5 +20,6 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => (
         </div>
       </main>
     </div>
+    <BottomDock />
   </div>
 ); 
