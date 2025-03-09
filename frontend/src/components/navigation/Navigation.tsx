@@ -354,7 +354,6 @@ export const DashboardNavbar = () => {
         <div className="flex items-center space-x-8">
           <Link to="/" className="flex items-center space-x-3">
             <Logo className="h-8 w-8" />
-            <span className="font-bold text-xl tracking-tight text-primary dark:text-neutral">Cite</span>
           </Link>
           <div className="hidden lg:flex space-x-6">
             <NavLink to="/generate" icon={<FilePlus size={18} />} label="New Paper" />
