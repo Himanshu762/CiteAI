@@ -43,8 +43,8 @@ export const CommonFooter = () => {
         <div className="flex flex-col items-center justify-center text-center mb-8">
           <h3 className="text-2xl font-bold text-neutral mb-2">CiteAI</h3>
           <p className="text-neutral/80">Empowering researchers since 2024</p>
-        </div>
-
+          </div>
+          
         {/* Copyright Section */}
         <div className="pt-6 border-t border-secondary/20">
           <div className="flex flex-col md:flex-row justify-between items-center">
@@ -53,9 +53,9 @@ export const CommonFooter = () => {
               <div className="flex space-x-6 mt-4">
                 <FooterLink href="#" className="text-sm text-neutral/60">Privacy</FooterLink>
                 <FooterLink href="#" className="text-sm text-neutral/60">Terms</FooterLink>
-              </div>
-            </div>
-            
+          </div>
+        </div>
+
             <OpenRouterLogo />
           </div>
         </div>
