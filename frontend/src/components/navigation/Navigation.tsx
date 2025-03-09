@@ -63,31 +63,43 @@ export const NavLink = ({ to, icon, label, className = '' }: NavLinkProps) => {
   );
 };
 
-// NavIconLink Component
-interface NavIconLinkProps {
+// Icon-only navigation link component (without tooltip functionality)
+const NavIconLink = ({
+  to,
+  icon,
+  label,
+  badge,
+  className = '',
+  isActive
+}: {
   to: string;
   icon: React.ReactNode;
   label: string;
-}
-
-export const NavIconLink = ({ to, icon, label }: NavIconLinkProps) => {
-  const navigate = useNavigate();
+  badge?: number;
+  className?: string;
+  isActive?: boolean;
+}) => {
   const location = useLocation();
-  const isActive = location.pathname.startsWith(to);
+  const active = isActive !== undefined ? isActive : location.pathname.startsWith(to);
   
   return (
-    <button
-      onClick={() => navigate(to)}
-      className={`block p-3 rounded-lg transition-colors ${
-        isActive 
-          ? "bg-accent/10 text-accent dark:bg-accent/10" 
-          : "text-primary hover:text-accent hover:bg-neutral dark:text-neutral dark:hover:text-accent dark:hover:bg-primary-800"
-      }`}
-      title={label}
-      aria-current={isActive ? "page" : undefined}
+    <Link
+      to={to}
+      className={`relative p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1 ${
+        active 
+          ? 'text-accent' 
+          : 'text-primary hover:text-accent hover:bg-neutral dark:text-neutral dark:hover:text-accent dark:hover:bg-primary-800'
+      } ${className}`}
+      aria-label={label}
     >
       {icon}
-    </button>
+      
+      {badge !== undefined && badge > 0 && (
+        <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 text-xs bg-red-500 text-white rounded-full">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+    </Link>
   );
 };
 
@@ -165,180 +177,55 @@ export const LandingHeader = () => {
 
 // Dashboard Sidebar Component
 export const DashboardSidebar = () => {
-  const navigate = useNavigate();
   const location = useLocation();
-  const [showTooltip, setShowTooltip] = useState<string | null>(null);
   
   // Helper to determine if current path matches
   const isCurrentPath = (path: string) => location.pathname.startsWith(path);
   
-  // Tooltip component
-  const Tooltip = ({ content, visible }: { content: string; visible: boolean }) => (
-    <div className={`absolute left-16 w-auto p-2 min-w-max rounded-md shadow-md text-neutral bg-primary-800 text-xs font-bold transition-all duration-150 ${visible ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
-      {content}
-    </div>
-  );
-
-  // Fixed navigation options
-  const renderFixedNavigation = () => (
-    <>
-      <NavIconLink to="/dashboard" icon={<Home size={20} />} label="Dashboard" />
-      
-      <div className="relative">
-        <NavIconLink to="/generate" icon={<FilePlus size={20} />} label="New Paper" />
-      </div>
-      
-      <div className="relative">
-        <NavIconLink to="/library" icon={<Library size={20} />} label="Library" />
-      </div>
-      
-      <div className="relative">
-        <NavIconLink to="/quality" icon={<ShieldCheck size={20} />} label="Quality" />
-      </div>
-      
-      <div className="border-t border-neutral-200 dark:border-primary-700 pt-6">
-        <NavIconLink to="/settings" icon={<Settings size={20} />} label="Settings" />
-      </div>
-    </>
-  );
-
-  // Context-specific options for the Generator page
-  const renderGeneratorOptions = () => (
-    <div className="border-t border-neutral-200 dark:border-primary-700 pt-4 mt-4 space-y-3">
-      <ActionButton
-        icon={<ClipboardList size={20} />}
-        tooltipId="templates"
-        tooltipContent="Choose Template"
-        onClick={() => navigate('/generate/templates')}
-      />
-      
-      <ActionButton
-        icon={<Quote size={20} />}
-        tooltipId="citations"
-        tooltipContent="Citation Style"
-        onClick={() => navigate('/generate/citations')}
-      />
-      
-      <ActionButton
-        icon={<Sparkles size={20} className="text-accent" />}
-        tooltipId="generate"
-        tooltipContent="Generate Content"
-        onClick={() => document.getElementById('generate-content-btn')?.click()}
-        highlighted={true}
-      />
-    </div>
-  );
-
-  // Context-specific options for the Library page
-  const renderLibraryOptions = () => (
-    <div className="border-t border-neutral-200 dark:border-primary-700 pt-4 mt-4 space-y-3">
-      <ActionButton
-        icon={<FolderPlus size={20} />}
-        tooltipId="create-folder"
-        tooltipContent="New Folder"
-        onClick={() => document.getElementById('create-folder-btn')?.click()}
-      />
-      
-      <ActionButton
-        icon={<Upload size={20} />}
-        tooltipId="import"
-        tooltipContent="Import Paper"
-        onClick={() => document.getElementById('import-paper-btn')?.click()}
-      />
-      
-      <ActionButton
-        icon={<SortDesc size={20} />}
-        tooltipId="sort"
-        tooltipContent="Sort Papers"
-        onClick={() => document.getElementById('sort-papers-btn')?.click()}
-      />
-    </div>
-  );
-
-  // Context-specific options for the Quality page
-  const renderQualityOptions = () => (
-    <div className="border-t border-neutral-200 dark:border-primary-700 pt-4 mt-4 space-y-3">
-      <ActionButton
-        icon={<Search size={20} />}
-        tooltipId="plagiarism"
-        tooltipContent="Plagiarism Check"
-        onClick={() => navigate('/quality/plagiarism')}
-      />
-      
-      <ActionButton
-        icon={<CheckCircle size={20} />}
-        tooltipId="grammar"
-        tooltipContent="Grammar Check"
-        onClick={() => navigate('/quality/grammar')}
-      />
-      
-      <ActionButton
-        icon={<BookOpen size={20} />}
-        tooltipId="citation-check"
-        tooltipContent="Citation Check"
-        onClick={() => navigate('/quality/citations')}
-      />
-    </div>
-  );
-
-  // Sidebar Action Button
-  const ActionButton = ({ 
-    icon, 
-    tooltipId, 
-    tooltipContent,
-    onClick,
-    highlighted = false 
-  }: { 
-    icon: React.ReactNode;
-    tooltipId: string;
-    tooltipContent: string;
-    onClick: () => void;
-    highlighted?: boolean;
-  }) => {
-    const [isLoading, setIsLoading] = useState(false);
-    
-    const handleClick = async () => {
-      setIsLoading(true);
-      try {
-        await onClick();
-      } finally {
-        // Add a small delay for better UX even if the action is instant
-        setTimeout(() => setIsLoading(false), 500);
-      }
-    };
-    
-    return (
-      <button 
-        className={`w-full flex items-center justify-center p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1 ${
-          highlighted 
-            ? 'bg-accent/10 text-accent'
-            : 'text-primary hover:text-accent hover:bg-neutral dark:text-neutral dark:hover:text-accent dark:hover:bg-primary-800'
-        }`}
-        onMouseEnter={() => setShowTooltip(tooltipId)}
-        onMouseLeave={() => setShowTooltip(null)}
-        onClick={handleClick}
-        disabled={isLoading}
-        aria-label={tooltipContent}
-      >
-        {isLoading ? (
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent"></div>
-        ) : (
-          icon
-        )}
-        <Tooltip content={tooltipContent} visible={showTooltip === tooltipId} />
-      </button>
-    );
-  };
-
   return (
-    <div className="fixed left-6 top-1/2 -translate-y-1/2 bg-neutral dark:bg-primary rounded-2xl shadow-xl p-4 space-y-1 z-40">
-      {/* Always show fixed navigation */}
-      {renderFixedNavigation()}
-      
-      {/* Show context-specific options based on current page */}
-      {isCurrentPath('/generate') && renderGeneratorOptions()}
-      {isCurrentPath('/library') && renderLibraryOptions()}
-      {isCurrentPath('/quality') && renderQualityOptions()}
+    <div className="fixed bottom-0 left-0 right-0 bg-neutral dark:bg-primary shadow-lg border-t border-neutral-200 dark:border-primary-700 p-3 z-40">
+      <div className="flex justify-around items-center">
+        {/* Main navigation items */}
+        <Link 
+          to="/dashboard" 
+          className={`flex flex-col items-center justify-center p-2 transition-colors ${isCurrentPath('/dashboard') ? 'text-accent' : 'text-gray-500 hover:text-accent'}`}
+        >
+          <Home size={20} />
+          <span className="text-xs mt-1">Dashboard</span>
+        </Link>
+        
+        <Link 
+          to="/generate" 
+          className={`flex flex-col items-center justify-center p-2 transition-colors ${isCurrentPath('/generate') ? 'text-accent' : 'text-gray-500 hover:text-accent'}`}
+        >
+          <FilePlus size={20} />
+          <span className="text-xs mt-1">New Paper</span>
+        </Link>
+        
+        <Link 
+          to="/library" 
+          className={`flex flex-col items-center justify-center p-2 transition-colors ${isCurrentPath('/library') ? 'text-accent' : 'text-gray-500 hover:text-accent'}`}
+        >
+          <Library size={20} />
+          <span className="text-xs mt-1">Library</span>
+        </Link>
+        
+        <Link 
+          to="/quality" 
+          className={`flex flex-col items-center justify-center p-2 transition-colors ${isCurrentPath('/quality') ? 'text-accent' : 'text-gray-500 hover:text-accent'}`}
+        >
+          <ShieldCheck size={20} />
+          <span className="text-xs mt-1">Quality</span>
+        </Link>
+        
+        <Link 
+          to="/settings" 
+          className={`flex flex-col items-center justify-center p-2 transition-colors ${isCurrentPath('/settings') ? 'text-accent' : 'text-gray-500 hover:text-accent'}`}
+        >
+          <Settings size={20} />
+          <span className="text-xs mt-1">Settings</span>
+        </Link>
+      </div>
     </div>
   );
 };
