@@ -24,15 +24,12 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://cite-ai.vercel.app",  # Production frontend
-        "http://localhost:5173",        # Local development
-        "*"                             # Allow all origins as a fallback
+        "https://cite-ai.vercel.app",     # Production frontend
+        "http://localhost:5173",          # Local development
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=86400,  # Cache preflight requests for 24 hours
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
 )
 
 class PaperRequest(BaseModel):
