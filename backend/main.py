@@ -1,6 +1,5 @@
 import requests
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import os
 from dotenv import load_dotenv
@@ -18,18 +17,6 @@ app = FastAPI(
     title="CiteAI API",
     description="API for generating academic papers with AI",
     version="1.0.0"
-)
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://cite-ai.vercel.app",     # Production frontend
-        "http://localhost:5173",          # Local development
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "Accept"],
 )
 
 class PaperRequest(BaseModel):
@@ -210,7 +197,7 @@ async def api_status():
 async def options_handler(request: Request, path: str):
     """Handle OPTIONS preflight requests for CORS"""
     response = Response(status_code=204)
-    response.headers["Access-Control-Allow-Origin"] = "https://cite-ai.vercel.app"
+    response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
     response.headers["Access-Control-Max-Age"] = "86400"  # 24 hours
