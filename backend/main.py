@@ -197,3 +197,8 @@ async def health_check():
         "version": "1.0.0",
         "api_key_configured": bool(api_key)
     }
+
+@app.get("/api/status")
+async def api_status():
+    """Simple endpoint to check if the API is running"""
+    return {"status": "online", "message": "API is operational"}
