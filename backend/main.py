@@ -23,7 +23,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://citeai.vercel.app"],  # Replace with your frontend URL
+    allow_origins=["https://cite-ai.vercel.app"],  # Replace with your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

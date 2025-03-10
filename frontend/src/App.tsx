@@ -4,6 +4,7 @@ import { PDFDocument } from 'pdf-lib';
 import { DashboardNavbar } from './components/navigation/Navigation';
 import CommonFooter from './components/Footer';
 import { Button, Input } from './components/ui/components';
+import { ENDPOINTS } from './config/api';
 
 interface PaperSections {
   [key: string]: string;
@@ -32,7 +33,7 @@ const App = () => {
     setError('');
     
     try {
-      const response = await fetch('http://localhost:8000/generate-paper', {
+      const response = await fetch(ENDPOINTS.GENERATE_PAPER, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
