@@ -120,7 +120,7 @@ export const LandingHeader = () => {
             <Link to="/" className="flex items-center space-x-3">
               <Logo className="h-8 w-8" />
             </Link>
-            <div className="hidden md:flex items-center space-x-6">
+            <div className="hidden md:flex items-center space-x-24">
               <Link to="/features" className="text-neutral hover:text-accent transition">Features</Link>
               
               {isSignedIn && (

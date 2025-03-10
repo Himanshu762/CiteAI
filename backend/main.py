@@ -23,7 +23,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://cite-ai.vercel.app"],  # Replace with your frontend URL
+    allow_origins=["https://cite-ai.vercel.app", "http://localhost:5173"],  # Allow both production and local development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -86,7 +86,7 @@ def calculate_readability(text: str) -> float:
     # Clamp between 0 and 100
     return max(0, min(100, readability))
 
-@app.post("/generate-paper")
+@app.post("/api/create-content")
 async def generate_paper(request: PaperRequest):
     try:
         api_key = os.getenv('OPENROUTER_API_KEY')

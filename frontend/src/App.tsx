@@ -33,17 +33,25 @@ const App = () => {
     setError('');
     
     try {
+      console.log("Attempting to connect to:", ENDPOINTS.GENERATE_PAPER);
+      
       const response = await fetch(ENDPOINTS.GENERATE_PAPER, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({
           topic,
           word_limit: wordLimit,
           sections: ['Abstract', 'Introduction', 'Literature Review', 'Methodology', 'Results', 'Discussion', 'Conclusion']
-        })
+        }),
+        mode: 'cors',  // Explicitly set CORS mode
       });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
       
       const data = await response.json();
       

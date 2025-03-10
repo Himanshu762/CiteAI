@@ -3,7 +3,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // API endpoints
 export const ENDPOINTS = {
-  GENERATE_PAPER: `${API_URL}/generate-paper`,
+  GENERATE_PAPER: `${API_URL}/api/create-content`,
   // Add other endpoints as needed
 };
 
