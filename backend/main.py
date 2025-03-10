@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import re
 import json
 import logging
+from fastapi.middleware.cors import CORSMiddleware
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -17,6 +18,15 @@ app = FastAPI(
     title="CiteAI API",
     description="API for generating academic papers with AI",
     version="1.0.0"
+)
+
+# Add CORS middleware with very permissive settings
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=False,  # Must be False when allow_origins=["*"]
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 class PaperRequest(BaseModel):
@@ -191,13 +201,19 @@ async def health_check():
 @app.get("/api/status")
 async def api_status():
     """Simple endpoint to check if the API is running"""
-    return {"status": "online", "message": "API is operational"}
+    # Log that this endpoint was called for debugging
+    logger.info("API status endpoint called")
+    return {
+        "status": "online", 
+        "message": "API is operational",
+        "cors": "enabled"
+    }
 
 @app.options("/api/{path:path}")
 async def options_handler(request: Request, path: str):
     """Handle OPTIONS preflight requests for CORS"""
     response = Response(status_code=204)
-    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Origin"] = "https://cite-ai.vercel.app"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
     response.headers["Access-Control-Max-Age"] = "86400"  # 24 hours

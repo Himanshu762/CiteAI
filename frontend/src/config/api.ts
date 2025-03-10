@@ -9,4 +9,4 @@ export const ENDPOINTS = {
   STATUS: `${API_URL.replace(/\/$/, '')}/api/status`
 };
 
-export default API_URL; 
+export default API_URL;

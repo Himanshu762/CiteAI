@@ -41,14 +41,15 @@ const App = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           topic,
           word_limit: wordLimit,
           sections: ['Abstract', 'Introduction', 'Literature Review', 'Methodology', 'Results', 'Discussion', 'Conclusion']
         }),
-        mode: 'cors',  // Explicitly set CORS mode
+        mode: 'cors',
+        credentials: 'omit'  // Don't send credentials for cross-origin requests with wildcard
       });
       
       if (!response.ok) {
