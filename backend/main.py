@@ -1,5 +1,5 @@
 import requests
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import os
@@ -205,3 +205,13 @@ async def health_check():
 async def api_status():
     """Simple endpoint to check if the API is running"""
     return {"status": "online", "message": "API is operational"}
+
+@app.options("/api/{path:path}")
+async def options_handler(request: Request, path: str):
+    """Handle OPTIONS preflight requests for CORS"""
+    response = Response(status_code=204)
+    response.headers["Access-Control-Allow-Origin"] = "https://cite-ai.vercel.app"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
+    response.headers["Access-Control-Max-Age"] = "86400"  # 24 hours
+    return response

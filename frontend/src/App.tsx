@@ -33,9 +33,11 @@ const App = () => {
     setError('');
     
     try {
-      console.log("Attempting to connect to:", ENDPOINTS.GENERATE_PAPER);
+      // Clean up the URL to ensure no double slashes
+      const apiUrl = ENDPOINTS.GENERATE_PAPER.replace(/([^:]\/)\/+/g, "$1");
+      console.log("Attempting to connect to:", apiUrl);
       
-      const response = await fetch(ENDPOINTS.GENERATE_PAPER, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -50,6 +52,7 @@ const App = () => {
       });
       
       if (!response.ok) {
+        console.error(`Server responded with status: ${response.status}, ${response.statusText}`);
         throw new Error(`Server responded with status: ${response.status}`);
       }
       
