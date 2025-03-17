@@ -9,6 +9,16 @@
   "routes": [
     {
       "src": "/(.*)",
+      "dest": "main.py",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://cite-ai.vercel.app",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "methods": ["OPTIONS"],
       "dest": "main.py"
     }
   ]

@@ -48,13 +48,14 @@ const App = () => {
           word_limit: wordLimit,
           sections: ['Abstract', 'Introduction', 'Literature Review', 'Methodology', 'Results', 'Discussion', 'Conclusion']
         }),
-        mode: 'cors',
-        credentials: 'omit'  // Don't send credentials for cross-origin requests with wildcard
+        mode: 'cors'
       });
       
       if (!response.ok) {
+        const errorText = await response.text().catch(() => 'No error details available');
         console.error(`Server responded with status: ${response.status}, ${response.statusText}`);
-        throw new Error(`Server responded with status: ${response.status}`);
+        console.error('Error details:', errorText);
+        throw new Error(`Server error: ${response.status}`);
       }
       
       const data = await response.json();

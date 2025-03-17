@@ -20,13 +20,13 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add CORS middleware with very permissive settings
+# Add CORS middleware with specific origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
-    allow_credentials=False,  # Must be False when allow_origins=["*"]
-    allow_methods=["*"],  # Allow all methods
-    allow_headers=["*"],  # Allow all headers
+    allow_origins=["https://cite-ai.vercel.app"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class PaperRequest(BaseModel):
@@ -87,7 +87,12 @@ def calculate_readability(text: str) -> float:
     return max(0, min(100, readability))
 
 @app.post("/api/create-content")
-async def generate_paper(request: PaperRequest):
+async def generate_paper(request: PaperRequest, response: Response):
+    # Always set CORS headers
+    response.headers["Access-Control-Allow-Origin"] = "https://cite-ai.vercel.app"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
+    
     try:
         api_key = os.getenv('OPENROUTER_API_KEY')
         if not api_key:
@@ -212,6 +217,17 @@ async def api_status():
 @app.options("/api/{path:path}")
 async def options_handler(request: Request, path: str):
     """Handle OPTIONS preflight requests for CORS"""
+    response = Response(status_code=204)
+    response.headers["Access-Control-Allow-Origin"] = "https://cite-ai.vercel.app"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
+    response.headers["Access-Control-Max-Age"] = "86400"  # 24 hours
+    return response
+
+# Add a catch-all OPTIONS handler for any path
+@app.options("/{path:path}")
+async def global_options_handler(request: Request, path: str):
+    """Handle OPTIONS preflight requests for any path"""
     response = Response(status_code=204)
     response.headers["Access-Control-Allow-Origin"] = "https://cite-ai.vercel.app"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
