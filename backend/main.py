@@ -23,7 +23,7 @@ app = FastAPI(
 # Add CORS middleware with specific origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://cite-ai.vercel.app"],
+    allow_origins=["https://cite-ai.vercel.app", "http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -89,7 +89,12 @@ def calculate_readability(text: str) -> float:
 @app.post("/api/create-content")
 async def generate_paper(request: PaperRequest, response: Response):
     # Always set CORS headers
-    response.headers["Access-Control-Allow-Origin"] = "https://cite-ai.vercel.app"
+    origin = "https://cite-ai.vercel.app"
+    # Check if request is from localhost
+    if "localhost" in request.headers.get("origin", ""):
+        origin = request.headers.get("origin")
+    
+    response.headers["Access-Control-Allow-Origin"] = origin
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
     
@@ -137,14 +142,14 @@ async def generate_paper(request: PaperRequest, response: Response):
             openrouter_url,
             headers=headers,
             json=payload,
-            timeout=60  # Add a timeout to prevent hanging
+            timeout=120  # Increase timeout from 60 to 120 seconds to prevent gateway timeouts
         )
 
         # Process response
         if response.status_code != 200:
             logger.error(f"API error: {response.status_code} - {response.text}")
             error_detail = response.json().get('error', {}).get('message', 'Unknown error')
-            return {"status": "error", "message": f"AI request failed: {error_detail}"}
+            raise HTTPException(status_code=response.status_code, detail=f"AI request failed: {error_detail}")
 
         # Log successful response
         logger.info("Received successful response from OpenRouter API")
@@ -185,13 +190,13 @@ async def generate_paper(request: PaperRequest, response: Response):
 
     except requests.exceptions.Timeout:
         logger.error("Request to OpenRouter API timed out")
-        return {"status": "error", "message": "Request timed out. Please try again."}
+        raise HTTPException(status_code=504, detail="Request to AI service timed out. Please try with a shorter word limit or try again later.")
     except requests.exceptions.RequestException as e:
         logger.error(f"Request error: {str(e)}")
-        return {"status": "error", "message": f"Network error: {str(e)}"}
+        raise HTTPException(status_code=500, detail=f"Network error: {str(e)}")
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
-        return {"status": "error", "message": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 async def health_check():
@@ -217,8 +222,13 @@ async def api_status():
 @app.options("/api/{path:path}")
 async def options_handler(request: Request, path: str):
     """Handle OPTIONS preflight requests for CORS"""
+    origin = "https://cite-ai.vercel.app"
+    # Check if request is from localhost
+    if "localhost" in request.headers.get("origin", ""):
+        origin = request.headers.get("origin")
+        
     response = Response(status_code=204)
-    response.headers["Access-Control-Allow-Origin"] = "https://cite-ai.vercel.app"
+    response.headers["Access-Control-Allow-Origin"] = origin
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
     response.headers["Access-Control-Max-Age"] = "86400"  # 24 hours
@@ -228,8 +238,13 @@ async def options_handler(request: Request, path: str):
 @app.options("/{path:path}")
 async def global_options_handler(request: Request, path: str):
     """Handle OPTIONS preflight requests for any path"""
+    origin = "https://cite-ai.vercel.app"
+    # Check if request is from localhost
+    if "localhost" in request.headers.get("origin", ""):
+        origin = request.headers.get("origin")
+        
     response = Response(status_code=204)
-    response.headers["Access-Control-Allow-Origin"] = "https://cite-ai.vercel.app"
+    response.headers["Access-Control-Allow-Origin"] = origin
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
     response.headers["Access-Control-Max-Age"] = "86400"  # 24 hours

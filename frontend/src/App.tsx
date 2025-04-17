@@ -52,9 +52,32 @@ const App = () => {
       });
       
       if (!response.ok) {
-        const errorText = await response.text().catch(() => 'No error details available');
-        console.error(`Server responded with status: ${response.status}, ${response.statusText}`);
-        console.error('Error details:', errorText);
+        console.log(`Server responded with status: ${response.status}`);
+        
+        let errorMessage = 'An error occurred while generating the paper';
+        
+        try {
+          const errorData = await response.json();
+          console.log('Error details:', errorData);
+          
+          if (errorData && errorData.detail) {
+            errorMessage = errorData.detail;
+          }
+        } catch (jsonError) {
+          // If we can't parse the JSON, use the status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        
+        // Handle specific status codes
+        if (response.status === 504) {
+          errorMessage = 'The server took too long to respond. Try a shorter word limit or try again later.';
+        } else if (response.status === 429) {
+          errorMessage = 'Too many requests. Please wait a moment and try again.';
+        } else if (response.status >= 500) {
+          errorMessage = 'Server error. Our systems are experiencing issues, please try again later.';
+        }
+        
+        setError(errorMessage);
         throw new Error(`Server error: ${response.status}`);
       }
       
@@ -70,7 +93,11 @@ const App = () => {
       }
     } catch (error) {
       console.error('Error generating paper:', error);
-      setError('Server error: Could not connect to the generation service');
+      
+      // If we didn't already set an error message in the response handling
+      if (!error.message?.includes('Server error:')) {
+        setError('Connection error: Could not connect to the generation service. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
