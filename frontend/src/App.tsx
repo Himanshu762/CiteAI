@@ -4,12 +4,9 @@ import { PDFDocument } from 'pdf-lib';
 import { DashboardNavbar } from './components/navigation/Navigation';
 import CommonFooter from './components/Footer';
 import { Button, Input } from './components/ui/components';
-import { ENDPOINTS } from './config/api';
 import React from 'react';
-
-interface PaperSections {
-  [key: string]: string;
-}
+import { generatePaper } from './services/openrouter';
+import { PaperSections } from './types/paper';
 
 const App = () => {
   const [topic, setTopic] = useState('');
@@ -22,6 +19,7 @@ const App = () => {
   const [wordCount, setWordCount] = useState(0);
   const [newCitation, setNewCitation] = useState('');
   const [citations, setCitations] = useState<Array<{ id: string; text: string }>>([]);
+  const [lightweightMode, setLightweightMode] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -34,73 +32,58 @@ const App = () => {
     setError('');
     
     try {
-      // Clean up the URL to ensure no double slashes
-      const apiUrl = ENDPOINTS.GENERATE_PAPER.replace(/([^:]\/)\/+/g, "$1");
-      console.log("Attempting to connect to:", apiUrl);
-      
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          topic,
-          word_limit: wordLimit,
-          sections: ['Abstract', 'Introduction', 'Literature Review', 'Methodology', 'Results', 'Discussion', 'Conclusion']
-        }),
-        mode: 'cors'
+      // Add error handling for unhandled promise rejections
+      window.addEventListener('unhandledrejection', function(event) {
+        if (event.reason?.message?.includes('message channel closed')) {
+          setError('Connection was interrupted. Please try again.');
+          setLoading(false);
+          // Prevent the default handling
+          event.preventDefault();
+        }
       });
       
-      if (!response.ok) {
-        console.log(`Server responded with status: ${response.status}`);
-        
-        let errorMessage = 'An error occurred while generating the paper';
-        
-        try {
-          const errorData = await response.json();
-          console.log('Error details:', errorData);
-          
-          if (errorData && errorData.detail) {
-            errorMessage = errorData.detail;
-          }
-        } catch (jsonError) {
-          // If we can't parse the JSON, use the status text
-          errorMessage = response.statusText || errorMessage;
-        }
-        
-        // Handle specific status codes
-        if (response.status === 504) {
-          errorMessage = 'The server took too long to respond. Try a shorter word limit or try again later.';
-        } else if (response.status === 429) {
-          errorMessage = 'Too many requests. Please wait a moment and try again.';
-        } else if (response.status >= 500) {
-          errorMessage = 'Server error. Our systems are experiencing issues, please try again later.';
-        }
-        
-        setError(errorMessage);
-        throw new Error(`Server error: ${response.status}`);
-      }
+      // Call our frontend service instead of the backend API
+      const result = await generatePaper({
+        topic,
+        wordLimit: lightweightMode ? Math.min(wordLimit, 2000) : wordLimit,
+        sections: lightweightMode 
+          ? ['Abstract', 'Introduction', 'Methodology', 'Results', 'Conclusion']
+          : ['Abstract', 'Introduction', 'Literature Review', 'Methodology', 'Results', 'Discussion', 'Conclusion']
+      });
       
-      const data = await response.json();
-      
-      if (data.status === 'success') {
-        setPaperSections(data.sections);
-        setPlagiarismScore(data.plagiarism_score || 0);
-        setReadabilityScore(data.readability_score || 0);
-        setWordCount(data.word_count || 0);
+      if (result.status === 'success') {
+        setPaperSections(result.sections);
+        setPlagiarismScore(result.plagiarism_score || 0);
+        setReadabilityScore(result.readability_score || 0);
+        setWordCount(result.word_count || 0);
       } else {
-        setError(data.message || 'An error occurred while generating the paper');
+        let errorMsg = result.message || 'An error occurred while generating the paper';
+        
+        // Provide more user-friendly messages for common errors
+        if (errorMsg.includes('API key')) {
+          errorMsg = 'OpenRouter API key is missing or invalid. Please check your configuration.';
+        } else if (errorMsg.includes('too long')) {
+          errorMsg = 'The request took too long. Try a shorter word limit or try again later.';
+        } else if (errorMsg.includes('rate limit')) {
+          errorMsg = 'Rate limit exceeded. Please wait a moment before trying again.';
+        }
+        
+        setError(errorMsg);
       }
     } catch (error: any) {
       console.error('Error generating paper:', error);
+      let errorMsg = error.message || 'Could not generate paper. Please try again later.';
       
-      // If we didn't already set an error message in the response handling
-      if (!error.message?.includes('Server error:')) {
-        setError('Connection error: Could not connect to the generation service. Please try again later.');
+      // Handle specific error messages
+      if (errorMsg.includes('message channel closed') || errorMsg.includes('interrupted')) {
+        errorMsg = 'Connection was interrupted. Please try again.';
       }
+      
+      setError('Error: ' + errorMsg);
     } finally {
       setLoading(false);
+      // Remove the event listener
+      window.removeEventListener('unhandledrejection', () => {});
     }
   };
 
@@ -215,6 +198,16 @@ const App = () => {
               </div>
             )}
             
+            <div className="mb-8 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg border border-blue-200 dark:border-blue-800">
+              <h3 className="font-medium mb-2">Tips for best results:</h3>
+              <ul className="list-disc pl-5 space-y-1 text-sm">
+                <li>Keep your browser tab open during generation (can take up to 2 minutes)</li>
+                <li>Use "Lightweight Mode" if you're experiencing timeouts</li>
+                <li>For longer papers, try generating sections separately</li>
+                <li>Reduce word limit if facing connection issues</li>
+              </ul>
+            </div>
+            
             <form onSubmit={handleSubmit} className="space-y-8 mb-10">
               <Input
                 id="topic"
@@ -245,6 +238,20 @@ const App = () => {
                   <span>3,000</span>
                   <span>5,000</span>
                 </div>
+              </div>
+              
+              <div className="flex items-center mt-4">
+                <input
+                  type="checkbox"
+                  id="lightweightMode"
+                  checked={lightweightMode}
+                  onChange={(e) => setLightweightMode(e.target.checked)}
+                  className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  disabled={loading}
+                />
+                <label htmlFor="lightweightMode" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  Lightweight Mode (for faster generation, less detailed)
+                </label>
               </div>
               
               <Button

@@ -1,12 +1,8 @@
 // API configuration
-// When running locally, point to the deployed backend
-const API_URL = import.meta.env.VITE_API_URL || 'https://citeai-back.vercel.app';
+const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5173';
 
-// API endpoints
-export const ENDPOINTS = {
-  // Ensure we don't have double slashes by removing trailing slash from API_URL if it exists
-  GENERATE_PAPER: `${API_URL.replace(/\/$/, '')}/api/create-content`,
-  STATUS: `${API_URL.replace(/\/$/, '')}/api/status`
-};
+// OpenRouter API configuration
+export const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+export const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 
-export default API_URL;
+export default BASE_URL;
