@@ -5,6 +5,7 @@ import { DashboardNavbar } from './components/navigation/Navigation';
 import CommonFooter from './components/Footer';
 import { Button, Input } from './components/ui/components';
 import { ENDPOINTS } from './config/api';
+import React from 'react';
 
 interface PaperSections {
   [key: string]: string;
@@ -22,7 +23,7 @@ const App = () => {
   const [newCitation, setNewCitation] = useState('');
   const [citations, setCitations] = useState<Array<{ id: string; text: string }>>([]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!topic.trim()) {
       setError('Please enter a topic');
@@ -91,7 +92,7 @@ const App = () => {
       } else {
         setError(data.message || 'An error occurred while generating the paper');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating paper:', error);
       
       // If we didn't already set an error message in the response handling
@@ -131,8 +132,8 @@ const App = () => {
         yPosition -= 30;
         
         // Add content (simplified - in a real app you'd handle pagination)
-        const paragraphs = content.split('\n');
-        paragraphs.forEach(paragraph => {
+        const paragraphs = (content as string).split('\n');
+        paragraphs.forEach((paragraph: string) => {
           if (yPosition < 50) {
             // Add new page if needed
             const newPage = pdfDoc.addPage();
@@ -191,7 +192,7 @@ const App = () => {
 
   useEffect(() => {
     const count = Object.values(paperSections).reduce((acc, content) => 
-      acc + (content ? content.split(/\s+/).length : 0), 0);
+      acc + (content ? (content as string).split(/\s+/).length : 0), 0);
     setWordCount(count);
   }, [paperSections]);
 
@@ -235,7 +236,7 @@ const App = () => {
                   max="5000"
                   step="100"
                   value={wordLimit}
-                  onChange={(e) => setWordLimit(parseInt(e.target.value))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setWordLimit(parseInt(e.target.value))}
                   className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
                   disabled={loading}
                 />
@@ -287,7 +288,7 @@ const App = () => {
                         {section}
                       </h3>
                       <div className="prose dark:prose-invert prose-indigo max-w-none">
-                        {content.split('\n').map((paragraph, i) => (
+                        {(content as string).split('\n').map((paragraph: string, i: number) => (
                           <p key={i} className="mb-4 text-gray-700 dark:text-gray-300">{paragraph}</p>
                         ))}
                       </div>
