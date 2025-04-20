@@ -1,6 +1,6 @@
 # CiteAI - Academic Paper Generator
 
-This application generates academic papers on any topic using AI. It's a frontend-only solution that interacts directly with the OpenRouter API.
+This application generates academic papers on any topic using Google's Gemini AI. It's a frontend-only solution that interacts directly with the Gemini API.
 
 ## Features
 
@@ -9,6 +9,7 @@ This application generates academic papers on any topic using AI. It's a fronten
 - Calculate readability scores
 - Plagiarism detection simulation
 - Export to PDF and DOCX formats
+- Powered by Google's experimental Gemini 2.5 Pro model for superior academic content
 
 ## Getting Started
 
@@ -16,6 +17,7 @@ This application generates academic papers on any topic using AI. It's a fronten
 
 - Node.js (v14 or later)
 - npm or yarn
+- Google Gemini API key with access to experimental models
 
 ### Installation
 
@@ -34,13 +36,13 @@ This application generates academic papers on any topic using AI. It's a fronten
    yarn install
    ```
 
-3. Create a `.env` file in the frontend directory with your OpenRouter API key:
+3. Create a `.env` file in the frontend directory with your Gemini API key:
    ```
-   VITE_OPENROUTER_API_KEY=your_openrouter_api_key_here
+   VITE_GEMINI_API_KEY=your_gemini_api_key_here
    VITE_BASE_URL=http://localhost:5173
    ```
 
-   You can get an API key from [OpenRouter](https://openrouter.ai/).
+   You can get a Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey). Make sure your API key has access to experimental models.
 
 ### Running the Application
 
@@ -55,6 +57,17 @@ yarn dev
 
 The application will be available at http://localhost:5173.
 
+## About Gemini 2.5 Pro
+
+This application uses Gemini 2.5 Pro (experimental), which offers:
+
+- Higher token context windows for longer papers
+- Better understanding of academic formatting and citations
+- Improved factual accuracy for research topics
+- More nuanced handling of complex academic subjects
+
+Note that as an experimental model, some features and behaviors may change as Google continues to refine it.
+
 ## Deployment
 
 This application can be deployed to Vercel or any other static hosting service:
@@ -67,7 +80,7 @@ Then deploy the `dist` directory.
 
 ### Important Security Considerations
 
-Note that this application includes your OpenRouter API key in the frontend code, which is not secure for production use. For a more secure approach, consider:
+Note that this application includes your Gemini API key in the frontend code, which is not secure for production use. For a more secure approach, consider:
 
 1. Implementing user authentication (e.g., with Clerk.js or Auth.js)
 2. Using a serverless function to make the API calls, keeping your API key secure
@@ -78,12 +91,12 @@ Note that this application includes your OpenRouter API key in the frontend code
 This application is a React/TypeScript frontend that:
 
 1. Takes user input for research topics
-2. Directly calls the OpenRouter API to generate academic content
+2. Directly calls the Gemini 2.5 Pro API to generate academic content
 3. Processes the API response to extract different paper sections
 4. Calculates metrics (readability, word count)
 5. Provides export options for the generated paper
 
-The previous version used a Python backend, but this has been replaced with frontend JavaScript to simplify deployment and reduce complexity.
+The application started with OpenRouter's API, then migrated to Gemini 1.5, and now uses Gemini 2.5 Pro for optimal performance and quality.
 
 ## License
 

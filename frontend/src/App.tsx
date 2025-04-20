@@ -20,6 +20,8 @@ const App = () => {
   const [newCitation, setNewCitation] = useState('');
   const [citations, setCitations] = useState<Array<{ id: string; text: string }>>([]);
   const [lightweightMode, setLightweightMode] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+  const [apiResponse, setApiResponse] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -40,6 +42,11 @@ const App = () => {
           // Prevent the default handling
           event.preventDefault();
         }
+        
+        // Log to apiResponse in debug mode
+        if (debugMode) {
+          setApiResponse(prev => prev + '\nUnhandled rejection: ' + JSON.stringify(event.reason));
+        }
       });
       
       // Call our frontend service instead of the backend API
@@ -50,6 +57,15 @@ const App = () => {
           ? ['Abstract', 'Introduction', 'Methodology', 'Results', 'Conclusion']
           : ['Abstract', 'Introduction', 'Literature Review', 'Methodology', 'Results', 'Discussion', 'Conclusion']
       });
+      
+      // Capture debug data in debug mode
+      if (debugMode && result.debug) {
+        setApiResponse(JSON.stringify({
+          rawResponse: result.debug.rawResponse ? result.debug.rawResponse.substring(0, 1000) + '...' : null,
+          parsedData: result.debug.parsedData,
+          error: result.debug.error
+        }, null, 2));
+      }
       
       if (result.status === 'success') {
         setPaperSections(result.sections);
@@ -69,6 +85,11 @@ const App = () => {
         }
         
         setError(errorMsg);
+        
+        // Log to apiResponse in debug mode
+        if (debugMode) {
+          setApiResponse('Error: ' + errorMsg + '\n' + JSON.stringify(result, null, 2));
+        }
       }
     } catch (error: any) {
       console.error('Error generating paper:', error);
@@ -80,6 +101,11 @@ const App = () => {
       }
       
       setError('Error: ' + errorMsg);
+      
+      // Log to apiResponse in debug mode
+      if (debugMode) {
+        setApiResponse('Error: ' + errorMsg + '\n' + JSON.stringify(error, null, 2));
+      }
     } finally {
       setLoading(false);
       // Remove the event listener
@@ -201,10 +227,11 @@ const App = () => {
             <div className="mb-8 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg border border-blue-200 dark:border-blue-800">
               <h3 className="font-medium mb-2">Tips for best results:</h3>
               <ul className="list-disc pl-5 space-y-1 text-sm">
-                <li>Keep your browser tab open during generation (can take up to 2 minutes)</li>
-                <li>Use "Lightweight Mode" if you're experiencing timeouts</li>
+                <li>This app uses Google's Gemini 1.5 Pro for reliable academic content generation</li>
+                <li>Keep your browser tab open during generation</li>
+                <li>"Lightweight Mode" is recommended for faster results</li>
                 <li>For longer papers, try generating sections separately</li>
-                <li>Reduce word limit if facing connection issues</li>
+                <li>The app now shows detailed console logs to help with troubleshooting</li>
               </ul>
             </div>
             
@@ -251,6 +278,20 @@ const App = () => {
                 />
                 <label htmlFor="lightweightMode" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
                   Lightweight Mode (for faster generation, less detailed)
+                </label>
+              </div>
+
+              <div className="flex items-center mt-2">
+                <input
+                  type="checkbox"
+                  id="debugMode"
+                  checked={debugMode}
+                  onChange={(e) => setDebugMode(e.target.checked)}
+                  className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  disabled={loading}
+                />
+                <label htmlFor="debugMode" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  Debug Mode (shows API response details)
                 </label>
               </div>
               
@@ -318,6 +359,17 @@ const App = () => {
                   >
                     Export as DOCX
                   </Button>
+                </div>
+              </div>
+            )}
+
+            {debugMode && apiResponse && (
+              <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-8">
+                <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">Debug Information</h2>
+                <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md">
+                  <pre className="whitespace-pre-wrap text-xs text-gray-700 dark:text-gray-300 overflow-auto max-h-96">
+                    {apiResponse}
+                  </pre>
                 </div>
               </div>
             )}

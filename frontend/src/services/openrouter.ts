@@ -1,5 +1,5 @@
 import { PaperSections } from '../types/paper';
-import { OPENROUTER_API_KEY, OPENROUTER_URL } from '../config/api';
+import { GEMINI_API_KEY, GEMINI_API_URL } from '../config/api';
 
 // Configuration
 // IMPORTANT: In a production app, you should NOT expose your API key in the frontend
@@ -20,6 +20,11 @@ interface GeneratePaperResponse {
   readability_score: number;
   plagiarism_score: number;
   message?: string;
+  debug?: {
+    rawResponse?: string;
+    parsedData?: any;
+    error?: any;
+  };
 }
 
 /**
@@ -118,12 +123,12 @@ async function retryWithBackoff<T>(
 }
 
 /**
- * Generate a paper on the given topic using OpenRouter API
+ * Generate a paper on the given topic using Gemini API
  */
 export async function generatePaper(params: GeneratePaperParams): Promise<GeneratePaperResponse> {
   try {
-    if (!OPENROUTER_API_KEY) {
-      throw new Error('OpenRouter API key not configured');
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key not configured');
     }
     
     // Construct academic prompt with section structure
@@ -141,17 +146,38 @@ export async function generatePaper(params: GeneratePaperParams): Promise<Genera
       const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
       
       try {
-        // API Request
-        const response = await fetch(OPENROUTER_URL, {
+        // Build the URL with API key
+        const url = `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`;
+        
+        console.log("Sending request to Gemini API...");
+        
+        // API Request using Gemini format
+        const response = await fetch(url, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-            'HTTP-Referer': window.location.origin,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'deepseek/deepseek-r1-zero:free',  // Using free tier deepseek model
-            messages: [{ role: 'user', content: prompt }]
+            contents: [
+              {
+                parts: [
+                  { text: prompt }
+                ]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.6,          // Slightly lower temperature for more focused academic content
+              topK: 32,                  // Adjusted for more precise word choice
+              topP: 0.9,                 // Slightly lower for more factual responses
+              maxOutputTokens: 16384,    // Increased max tokens for Gemini 2.5's higher capacity
+              stopSequences: []
+            },
+            safetySettings: [
+              {
+                category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                threshold: "BLOCK_NONE"
+              }
+            ]
           }),
           signal: controller.signal
         });
@@ -159,21 +185,77 @@ export async function generatePaper(params: GeneratePaperParams): Promise<Genera
         // Clear the timeout since the request completed
         clearTimeout(timeoutId);
         
+        // Log response status
+        console.log(`Gemini API response status: ${response.status}`);
+        
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: { message: 'Failed to parse error response' }}));
-          throw new Error(errorData.error?.message || `API error: ${response.status}`);
+          const errorText = await response.text();
+          console.error("API Error Response:", errorText);
+          
+          try {
+            const errorData = JSON.parse(errorText);
+            throw new Error(errorData.error?.message || `API error: ${response.status}`);
+          } catch (jsonError) {
+            throw new Error(`API error (${response.status}): ${errorText.substring(0, 100)}...`);
+          }
         }
         
-        // Extract content from the response
-        const responseData = await response.json().catch(() => {
+        // Extract content from the response (Gemini format is different)
+        const responseText = await response.text();
+        console.log("Raw API response:", responseText.substring(0, 200) + "...");
+        
+        // Store raw response for debugging
+        let debugData = {
+          rawResponse: responseText,
+          parsedData: null,
+          error: null
+        };
+        
+        let responseData;
+        try {
+          responseData = JSON.parse(responseText);
+          debugData.parsedData = responseData;
+        } catch (jsonError) {
+          console.error("Error parsing JSON response:", jsonError);
+          debugData.error = jsonError;
           throw new Error('Failed to parse API response');
-        });
-        
-        if (!responseData.choices || !responseData.choices[0]?.message?.content) {
-          throw new Error('Invalid response format from API');
         }
         
-        const content = responseData.choices[0].message.content;
+        console.log("Response data structure:", JSON.stringify(Object.keys(responseData)));
+        
+        // Handle different response formats between Gemini versions
+        let content = '';
+        
+        // Try different potential response formats
+        if (responseData.candidates && responseData.candidates[0]?.content?.parts) {
+          console.log("Using standard Gemini format");
+          const parts = responseData.candidates[0].content.parts;
+          content = parts.map(part => part.text || '').join(' ');
+        } 
+        else if (responseData.candidates && responseData.candidates[0]?.content) {
+          console.log("Using alternative Gemini format");
+          content = responseData.candidates[0].content.text || 
+                    responseData.candidates[0].content || '';
+        }
+        else if (responseData.text) {
+          console.log("Using simple text format");
+          content = responseData.text;
+        }
+        else if (responseData.result) {
+          console.log("Using result format");
+          content = responseData.result;
+        }
+        else {
+          console.error("Unexpected response structure:", responseData);
+          throw new Error('Invalid response format from API - could not locate content');
+        }
+        
+        if (!content) {
+          console.error("Empty content in response:", responseData);
+          throw new Error('Empty response from API');
+        }
+        
+        console.log("Content extracted, length:", content.length);
         
         // Extract sections from the response
         const sections: PaperSections = {};
@@ -191,8 +273,7 @@ export async function generatePaper(params: GeneratePaperParams): Promise<Genera
         );
         
         // Calculate readability
-        const allText = Object.values(sections).join(' ');
-        const readabilityScore = calculateReadability(allText);
+        const readabilityScore = calculateReadability(content);
         
         // Generate fake plagiarism score (in a real app, you'd use a plagiarism detection API)
         const plagiarismScore = Math.floor(Math.random() * 15) + 1;  // 1-15%
@@ -202,7 +283,8 @@ export async function generatePaper(params: GeneratePaperParams): Promise<Genera
           sections,
           word_count: wordCount,
           readability_score: Math.round(readabilityScore),
-          plagiarism_score: plagiarismScore
+          plagiarism_score: plagiarismScore,
+          debug: debugData
         };
       } catch (fetchError: any) {
         // Handle specific abort errors
@@ -226,7 +308,12 @@ export async function generatePaper(params: GeneratePaperParams): Promise<Genera
       sections: {},
       word_count: 0,
       readability_score: 0,
-      plagiarism_score: 0
+      plagiarism_score: 0,
+      debug: {
+        rawResponse: '',
+        parsedData: null,
+        error: error
+      }
     };
   }
 } 
