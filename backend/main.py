@@ -126,11 +126,11 @@ async def generate_paper(request: PaperRequest, response: Response):
         )
 
         # Log the API request
-        logger.info(f"Sending request to OpenRouter API with model: deepseek/deepseek-r1-zero")
+        logger.info(f"Sending request to OpenRouter API with model: deepseek/deepseek-chat-v3.1:free")
         
         # API Request payload
         payload = {
-            "model": "deepseek/deepseek-r1-zero:free",  # Using free tier deepseek model
+            "model": "deepseek/deepseek-chat-v3.1:free",  # Using free tier deepseek model
             "messages": [{"role": "user", "content": prompt}]
         }
         
