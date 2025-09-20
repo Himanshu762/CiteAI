@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="80" viewBox="0 0 200 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left flourish -->
+  <g transform="translate(40,40)">
+    <!-- Main curl -->
+    <path d="M0 0C-10 -10 -20 -5 -25 5C-20 15 -10 10 -5 5C0 10 5 15 15 10C25 5 20 -5 10 -10C5 -5 0 0 0 0Z" 
+          fill="none" stroke="#d4af37" stroke-width="1.5" opacity="0.8"/>
+    
+    <!-- Decorative leaves -->
+    <path d="M-15 -3C-18 -8 -12 -12 -8 -8C-4 -4 -8 0 -15 -3Z" fill="#d4af37" opacity="0.6"/>
+    <path d="M-10 8C-13 13 -7 17 -3 13C1 9 -3 4 -10 8Z" fill="#d4af37" opacity="0.6"/>
+    
+    <!-- Small ornamental dots -->
+    <circle cx="-5" cy="-5" r="1" fill="#d4af37"/>
+    <circle cx="5" cy="5" r="1" fill="#d4af37"/>
+    <circle cx="-8" cy="3" r="0.8" fill="#d4af37" opacity="0.7"/>
+  </g>
+  
+  <!-- Center ornament -->
+  <g transform="translate(100,40)">
+    <!-- Diamond center -->
+    <path d="M0 -8L8 0L0 8L-8 0Z" fill="#d4af37"/>
+    <path d="M0 -6L6 0L0 6L-6 0Z" fill="#722f37"/>
+    <circle cx="0" cy="0" r="2" fill="#d4af37"/>
+    
+    <!-- Radiating lines -->
+    <line x1="0" y1="-12" x2="0" y2="-8" stroke="#d4af37" stroke-width="1"/>
+    <line x1="0" y1="8" x2="0" y2="12" stroke="#d4af37" stroke-width="1"/>
+    <line x1="-12" y1="0" x2="-8" y2="0" stroke="#d4af37" stroke-width="1"/>
+    <line x1="8" y1="0" x2="12" y2="0" stroke="#d4af37" stroke-width="1"/>
+  </g>
+  
+  <!-- Right flourish (mirrored) -->
+  <g transform="translate(160,40) scale(-1,1)">
+    <!-- Main curl -->
+    <path d="M0 0C-10 -10 -20 -5 -25 5C-20 15 -10 10 -5 5C0 10 5 15 15 10C25 5 20 -5 10 -10C5 -5 0 0 0 0Z" 
+          fill="none" stroke="#d4af37" stroke-width="1.5" opacity="0.8"/>
+    
+    <!-- Decorative leaves -->
+    <path d="M-15 -3C-18 -8 -12 -12 -8 -8C-4 -4 -8 0 -15 -3Z" fill="#d4af37" opacity="0.6"/>
+    <path d="M-10 8C-13 13 -7 17 -3 13C1 9 -3 4 -10 8Z" fill="#d4af37" opacity="0.6"/>
+    
+    <!-- Small ornamental dots -->
+    <circle cx="-5" cy="-5" r="1" fill="#d4af37"/>
+    <circle cx="5" cy="5" r="1" fill="#d4af37"/>
+    <circle cx="-8" cy="3" r="0.8" fill="#d4af37" opacity="0.7"/>
+  </g>
+</svg>

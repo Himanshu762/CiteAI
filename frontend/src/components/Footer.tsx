@@ -51,8 +51,8 @@ export const CommonFooter = () => {
             <div className="text-center md:text-left">
               <p className="text-sm text-neutral/60">&copy; 2024 CiteAI. All rights reserved.</p>
               <div className="flex space-x-6 mt-4">
-                <FooterLink href="#" className="text-sm text-neutral/60">Privacy</FooterLink>
-                <FooterLink href="#" className="text-sm text-neutral/60">Terms</FooterLink>
+                <Link to="/privacy" className="text-sm text-neutral/60 hover:text-accent transition-colors">Privacy</Link>
+                <Link to="/terms" className="text-sm text-neutral/60 hover:text-accent transition-colors">Terms</Link>
           </div>
         </div>
 
@@ -64,13 +64,5 @@ export const CommonFooter = () => {
   );
 };
 
-const FooterLink = ({ href, children, className = '' }: { href: string; children: React.ReactNode; className?: string }) => (
-  <a 
-    href={href} 
-    className={`hover:text-accent transition-colors ${className}`}
-  >
-    {children}
-  </a>
-);
 
 export default CommonFooter;

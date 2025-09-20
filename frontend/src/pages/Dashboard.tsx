@@ -17,16 +17,16 @@ interface StatsCardProps {
 }
 
 const StatsCard = ({ title, value, icon, trend, trendLabel }: StatsCardProps) => (
-  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm flex flex-col h-full">
+  <div className="royal-card p-6 rounded-xl shadow-royal flex flex-col h-full">
     <div className="flex justify-between items-start mb-4">
-      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</span>
-      <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
+      <span className="text-sm font-medium text-parchment-200">{title}</span>
+      <div className="p-2 bg-parchment-50 rounded-lg text-gold-500">
         {icon}
       </div>
     </div>
-    <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{value}</div>
+    <div className="text-2xl font-bold text-parchment-100 mb-1">{value}</div>
     {trend !== undefined && (
-      <div className={`flex items-center text-sm ${trend >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+      <div className={`flex items-center text-sm ${trend >= 0 ? 'text-emerald-400' : 'text-crimson-400'}`}>
         {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}% {trendLabel}
       </div>
     )}
@@ -34,19 +34,19 @@ const StatsCard = ({ title, value, icon, trend, trendLabel }: StatsCardProps) =>
 );
 
 const RecentPaperCard = ({ title, date, progress }: { title: string, date: string, progress: number }) => (
-  <div className="flex items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm mb-3 w-full">
-    <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg mr-4">
-      <FileText size={20} className="text-indigo-600 dark:text-indigo-400" />
+  <div className="flex items-center p-4 bg-parchment rounded-lg shadow-inner mb-3 w-full">
+    <div className="p-2 bg-parchment-200 rounded-lg mr-4">
+      <FileText size={20} className="text-gold-500" />
     </div>
     <div className="flex-1 min-w-0">
-      <h3 className="font-medium text-gray-900 dark:text-white truncate">{title}</h3>
+      <h3 className="font-medium text-parchment-900 truncate">{title}</h3>
       <div className="flex justify-between items-center mt-1">
-        <span className="text-xs text-gray-500 dark:text-gray-400">{date}</span>
+        <span className="text-xs text-parchment-700">{date}</span>
         <span className="text-xs font-medium">{progress}% complete</span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1.5 dark:bg-gray-700">
-        <div 
-          className="bg-indigo-600 h-1.5 rounded-full dark:bg-indigo-400" 
+      <div className="w-full bg-parchment-300 rounded-full h-1.5 mt-1.5">
+        <div
+          className="bg-gold-500 h-1.5 rounded-full"
           style={{ width: `${progress}%` }}
         ></div>
       </div>
@@ -70,7 +70,7 @@ export default function DashboardPage() {
     <DashboardLayout>
       <div className="space-y-8 w-full">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-parchment-100">Dashboard</h1>
           <div className="flex items-center space-x-4">
             <Button 
               variant="primary"
@@ -116,8 +116,8 @@ export default function DashboardPage() {
 
             {/* Recent Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
-              <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 h-full">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Papers</h2>
+              <div className="lg:col-span-2 royal-card p-6 rounded-xl shadow-royal h-full">
+                <h2 className="text-lg font-semibold text-parchment-100 mb-4">Recent Papers</h2>
                 <div className="space-y-3">
                   {userPapers.map((paper, index) => (
                     <RecentPaperCard 
@@ -133,8 +133,8 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 h-full">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
+              <div className="royal-card p-6 rounded-xl shadow-royal h-full">
+                <h2 className="text-lg font-semibold text-parchment-100 mb-4">Quick Actions</h2>
                 <div className="grid grid-cols-2 gap-3">
                   <Button variant="outline" size="sm" className="flex items-center justify-center">
                     <Calendar size={16} className="mr-2" />
@@ -155,9 +155,9 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="mt-6">
-                  <h3 className="font-medium text-gray-900 dark:text-white mb-3">Tips</h3>
-                  <div className="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-lg">
-                    <p className="text-sm text-indigo-800 dark:text-indigo-300">Use AI to generate citations and bibliographies automatically for your papers.</p>
+                  <h3 className="font-medium text-parchment-100 mb-3">Tips</h3>
+                  <div className="bg-parchment p-4 rounded-lg">
+                    <p className="text-sm text-parchment-900">Use AI to generate citations and bibliographies automatically for your papers.</p>
                   </div>
                 </div>
               </div>
@@ -165,12 +165,12 @@ export default function DashboardPage() {
           </>
         ) : (
           // Empty state when no papers exist
-          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
-            <div className="bg-indigo-50 dark:bg-indigo-900/30 p-6 rounded-full mb-6">
-              <FilePlus size={48} className="text-indigo-600 dark:text-indigo-400" />
+          <div className="flex flex-col items-center justify-center py-16 px-4 royal-card rounded-xl shadow-royal">
+            <div className="bg-parchment-50 p-6 rounded-full mb-6">
+              <FilePlus size={48} className="text-gold-500" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Get Started with Your First Paper</h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-md text-center">
+            <h2 className="text-2xl font-bold text-parchment-100 mb-2">Get Started with Your First Paper</h2>
+            <p className="text-parchment-200 mb-8 max-w-md text-center">
               Generate high-quality academic papers with AI assistance, citations, and built-in quality control.
             </p>
             <Button 
@@ -186,4 +186,4 @@ export default function DashboardPage() {
       </div>
     </DashboardLayout>
   );
-} 
+}

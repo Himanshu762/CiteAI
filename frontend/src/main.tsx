@@ -12,6 +12,7 @@ import 'react-hot-toast'
 import { Buffer } from 'buffer'
 import './fonts.css'
 import { Logo } from './components/ui/components'
+import { AuthFlow } from './components/AuthFlow'
 // <reference path="./types/react-yjs.d.ts" />
 
 // Browser-only process polyfill with proper typing
@@ -52,6 +53,8 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/settings" element={<UserSettings />} />
         <Route path="/logo-demo" element={<LogoDemo />} />
         <Route path="/features" element={<FeaturesPage />} />
+        <Route path="/sign-in/*" element={<AuthFlow mode="sign-in" />} />
+        <Route path="/sign-up/*" element={<AuthFlow mode="sign-up" />} />
         <Route 
           path="/sign-in/*" 
           element={

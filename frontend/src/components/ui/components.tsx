@@ -1,206 +1,50 @@
 import React, { ReactNode } from 'react';
+import { Feather } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-// Logo Component
-export const Logo = ({ 
-  className = '', 
-  minimal = false, 
-  animated = false 
-}: { 
-  className?: string; 
-  minimal?: boolean;
-  animated?: boolean;
-}) => (
-  <div className={`inline-flex items-center ${className || ''} ${animated ? 'group' : ''}`}>
+// --- Bespoke Components for "The Scholar's Desk" Theme ---
+
+export const Logo = ({ className = '', minimal = false, animated = false }: { className?: string; minimal?: boolean; animated?: boolean }) => (
+  <Link to="/" className={`flex items-center space-x-2 group ${className}`}>
     {minimal ? (
-      // Minimalist icon version
-      <svg 
-        viewBox="0 0 64 64" 
-        className={`h-8 w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 transition-all duration-300 hover:drop-shadow-lg ${animated ? 'group-hover:animate-pulse' : ''}`}
-      >
-        <path 
-          d="M32 12L12 32l20 20 20-20z" 
-          className="fill-primary dark:fill-primary"
-        />
-        <path 
-          d="M32 28l-8-8 16-16 16 16-8 8" 
-          className={`stroke-accent dark:stroke-accent fill-none ${animated ? 'group-hover:stroke-[3px]' : ''}`}
-          strokeWidth="2"
-        />
-      </svg>
+      <Feather className={`text-gold-leaf ${animated ? 'group-hover:animate-bounce' : ''}`} size={24} />
     ) : (
-      // Full detailed icon
-      <svg 
-        viewBox="0 0 100 100" 
-        className={`h-8 w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 transition-all duration-300 hover:drop-shadow-lg ${animated ? 'group-hover:animate-pulse' : ''}`}
-      >
-        {/* Book base */}
-        <path 
-          d="M20,20 L50,5 L80,20 V80 L50,95 L20,80 Z"
-          className={`fill-primary dark:fill-primary stroke-accent dark:stroke-accent transition-all duration-300 ${animated ? 'group-hover:stroke-[3px]' : ''}`}
-          strokeWidth="2"
-        />
-        
-        {/* AI circuit pattern */}
-        <path
-          d="M35,35 L45,25 L65,40 L55,50 M50,60 L60,70"
-          className="stroke-accent dark:stroke-accent transition-all duration-300"
-          strokeWidth="3"
-          strokeLinecap="round"
-          fill="none"
-        />
-        
-        {/* Dots */}
-        <circle cx="35" cy="35" r="3" className="fill-accent dark:fill-accent" />
-        <circle cx="45" cy="25" r="3" className="fill-accent dark:fill-accent" />
-        <circle cx="65" cy="40" r="3" className="fill-accent dark:fill-accent" />
-        <circle cx="55" cy="50" r="3" className="fill-accent dark:fill-accent" />
-        <circle cx="50" cy="60" r="3" className="fill-accent dark:fill-accent" />
-        <circle cx="60" cy="70" r="3" className="fill-accent dark:fill-accent" />
-      </svg>
+      <>
+        <Feather className={`text-gold-leaf ${animated ? 'group-hover:animate-pulse' : ''}`} size={28} />
+        <span className="font-serif text-2xl font-bold text-parchment">
+          Cite<span className="text-gold-leaf">AI</span>
+        </span>
+      </>
     )}
-    
-    {/* Text */}
-    <div className="flex items-baseline ml-2">
-      <span className="font-sans text-neutral text-lg md:text-xl lg:text-2xl font-bold">
-        Cite
-      </span>
-      <span className={`font-sans text-accent text-lg md:text-xl lg:text-2xl font-bold ml-1 ${animated ? 'group-hover:animate-pulse' : ''}`}>
-        AI
-      </span>
-    </div>
-  </div>
+  </Link>
 );
 
-// Badge Component
-interface BadgeProps {
-  children: ReactNode;
-  variant?: 'default' | 'secondary' | 'success' | 'warning' | 'danger';
-  className?: string;
-}
-
-export const Badge = ({ 
-  children, 
-  variant = 'default', 
-  className = '' 
-}: BadgeProps) => {
-  const variantClasses = {
-    default: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300',
-    secondary: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
-    success: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-    warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-    danger: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  };
-
-  return (
-    <span 
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variantClasses[variant]} ${className}`}
-    >
-      {children}
-    </span>
-  );
-};
-
-// Button Component
 interface ButtonProps {
-  children: ReactNode;
+  children: React.ReactNode;
   onClick?: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   disabled?: boolean;
   type?: 'button' | 'submit' | 'reset';
 }
 
-export const Button = ({
-  children,
-  onClick,
-  variant = 'primary',
-  size = 'md',
-  className = '',
-  disabled = false,
-  type = 'button'
-}: ButtonProps) => {
+export const Button = ({ children, onClick, variant = 'primary', size = 'md', className = '', disabled = false, type = 'button' }: ButtonProps) => {
+  const baseClasses = "inline-flex items-center justify-center rounded-md font-semibold font-serif transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-ink";
+  const sizeClasses = { sm: 'px-4 py-2 text-sm', md: 'px-6 py-2 text-base', lg: 'px-8 py-3 text-lg' };
   const variantClasses = {
-    primary: 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500',
-    secondary: 'bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500',
-    outline: 'bg-transparent border border-indigo-600 text-indigo-600 hover:bg-indigo-50 focus:ring-indigo-500 dark:border-indigo-400 dark:text-indigo-400 dark:hover:bg-indigo-950',
-    ghost: 'bg-transparent text-indigo-600 hover:bg-indigo-50 focus:ring-indigo-500 dark:text-indigo-400 dark:hover:bg-indigo-950'
+    primary: "bg-gold-leaf text-ink hover:bg-gold-leaf-light hover:shadow-gold-glow-md disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none",
+    outline: "border-2 border-gold-leaf/50 text-gold-leaf bg-transparent hover:bg-gold-leaf/10 hover:border-gold-leaf",
+    ghost: "bg-transparent text-gold-leaf hover:bg-gold-leaf/10",
   };
-
-  const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2',
-    lg: 'px-6 py-3 text-lg'
-  };
-
-  return (
-    <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
-      className={`rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors
-                ${variantClasses[variant]} ${sizeClasses[size]}
-                ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-                ${className}`}
-    >
-      {children}
-    </button>
-  );
+  return <button type={type} onClick={onClick} disabled={disabled} className={`${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}>{children}</button>;
 };
 
-// Table Components
-interface TableProps {
-  children: ReactNode;
-  className?: string;
-}
-
-export const Table = ({ children, className = '' }: TableProps) => (
-  <div className="overflow-x-auto">
-    <table className={`min-w-full divide-y divide-gray-200 dark:divide-gray-700 ${className}`}>
-      {children}
-    </table>
-  </div>
-);
-
-export const TableHeader = ({ children, className = '' }: TableProps) => (
-  <thead className={className}>
-    {children}
-  </thead>
-);
-
-export const TableBody = ({ children, className = '' }: TableProps) => (
-  <tbody className={`divide-y divide-gray-200 dark:divide-gray-700 ${className}`}>
-    {children}
-  </tbody>
-);
-
-export const TableRow = ({ children, className = '' }: TableProps) => (
-  <tr className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${className}`}>
-    {children}
-  </tr>
-);
-
-export const TableHead = ({ children, className = '' }: TableProps) => (
-  <th 
-    scope="col" 
-    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${className}`}
-  >
-    {children}
-  </th>
-);
-
-export const TableCell = ({ children, className = '' }: TableProps) => (
-  <td className={`px-6 py-4 whitespace-nowrap text-sm ${className}`}>
-    {children}
-  </td>
-);
-
-// Input Component
 interface InputProps {
   id?: string;
-  type?: string;
+  type?: 'text' | 'textarea' | 'email' | 'password' | 'number';
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -208,115 +52,72 @@ interface InputProps {
   maxLength?: number;
 }
 
-export const Input = ({
-  id,
-  type = 'text',
-  value,
-  onChange,
-  placeholder = '',
-  className = '',
-  disabled = false,
-  label,
-  maxLength
-}: InputProps) => (
-  <div className="w-full">
-    {label && (
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        {label}
-      </label>
+export const Input = ({ id, type = 'text', value, onChange, placeholder = '', className = '', disabled = false, label, maxLength }: InputProps) => (
+  <div>
+    {label && <label htmlFor={id} className="block text-sm font-serif font-semibold mb-2 text-muted-ink">{label}</label>}
+    {type === 'textarea' ? (
+      <textarea
+        id={id}
+        value={value}
+        onChange={onChange as any}
+        placeholder={placeholder}
+        disabled={disabled}
+        className={`w-full p-3 rounded-md border border-border bg-input text-foreground text-base transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring resize-none ${className}`}
+        rows={4}
+        maxLength={maxLength}
+      />
+    ) : (
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={onChange as any}
+        placeholder={placeholder}
+        disabled={disabled}
+        className={`w-full p-3 rounded-md border border-border bg-input text-foreground text-base transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring ${className}`}
+        maxLength={maxLength}
+      />
     )}
-    <input
-      id={id}
-      type={type}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      disabled={disabled}
-      maxLength={maxLength}
-      className={`w-full p-3 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm 
-                focus:ring-2 focus:ring-accent focus:border-accent 
-                dark:bg-primary-800 dark:text-neutral ${className}`}
-    />
   </div>
 );
 
-export const PageHeader = ({ 
-  prefix = 'AI',
-  title 
-}: { 
-  prefix?: string;
-  title: string;
-}) => {
-  return (
-    <div className="flex items-baseline gap-12 mt-8">
-      <span className="text-accent font-bold text-3xl inline-block min-w-[3ch] relative z-10">{prefix}</span>
-      <h1 className="text-primary dark:text-neutral text-3xl font-bold relative z-0">{title}</h1>
-    </div>
-  );
-};
+// Simple Stepper component used by the generator wizard
+export const Stepper = ({ steps, currentStep = 0, onChange = (s: number) => {} }: { steps: string[]; currentStep?: number; onChange?: (step: number) => void }) => (
+  <div className="flex items-center space-x-4" role="tablist" aria-label="Wizard steps">
+    {steps.map((s, idx) => (
+      <button
+        key={s}
+        onClick={() => onChange(idx)}
+        role="tab"
+        aria-selected={idx === currentStep}
+        className={`px-3 py-1 rounded-md font-serif text-sm ${idx === currentStep ? 'bg-gold-500 text-royal-midnight' : 'text-parchment/80 bg-transparent hover:bg-gold-500/8'}`}
+      >
+        {s}
+      </button>
+    ))}
+  </div>
+);
 
-// Stepper Component
-export interface StepperProps {
-  steps: string[];
-  currentStep: number;
-  onChange?: (step: number) => void;
-  className?: string;
-}
+// --- Overhauled Data Table Components ---
+export const Table = ({ children, className = '' }: { children: ReactNode, className?: string }) => (
+  <div className="overflow-x-auto"><table className={`min-w-full divide-y-2 divide-border ${className}`}>{children}</table></div>
+);
+export const TableHeader = ({ children, className = '' }: { children: ReactNode, className?: string }) => <thead className={className}>{children}</thead>;
+export const TableBody = ({ children, className = '' }: { children: ReactNode, className?: string }) => <tbody className={`divide-y divide-border ${className}`}>{children}</tbody>;
+export const TableRow = ({ children, className = '' }: { children: ReactNode, className?: string }) => <tr className={`hover:bg-card/50 ${className}`}>{children}</tr>;
+export const TableHead = ({ children, className = '' }: { children: ReactNode, className?: string }) => (
+  <th scope="col" className={`px-6 py-4 text-left text-xs font-serif font-bold text-muted-ink uppercase tracking-wider ${className}`}>{children}</th>
+);
+export const TableCell = ({ children, className = '' }: { children: ReactNode, className?: string }) => <td className={`px-6 py-4 whitespace-nowrap text-sm text-parchment ${className}`}>{children}</td>;
 
-export const Stepper = ({ 
-  steps, 
-  currentStep, 
-  onChange, 
-  className = '' 
-}: StepperProps) => {
-  return (
-    <div className={`flex items-center w-full ${className}`}>
-      {steps.map((step, index) => (
-        <React.Fragment key={index}>
-          {/* Step circle */}
-          <div
-            className={`relative flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-full z-10 
-              ${
-                index < currentStep
-                  ? 'bg-accent text-primary'
-                  : index === currentStep
-                  ? 'bg-accent/10 border-2 border-accent text-accent'
-                  : 'bg-neutral-200 dark:bg-primary-700 text-primary-400 dark:text-neutral-400'
-              } 
-              ${onChange ? 'cursor-pointer' : ''}`}
-            onClick={() => onChange?.(index)}
-          >
-            {index < currentStep ? (
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className="w-5 h-5" 
-                viewBox="0 0 20 20" 
-                fill="currentColor"
-              >
-                <path 
-                  fillRule="evenodd" 
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" 
-                  clipRule="evenodd" 
-                />
-              </svg>
-            ) : (
-              <span className="text-sm font-medium">{index + 1}</span>
-            )}
-          </div>
 
-          {/* Connector line */}
-          {index < steps.length - 1 && (
-            <div
-              className={`flex-auto border-t-2 transition-colors 
-                ${
-                  index < currentStep
-                    ? 'border-accent'
-                    : 'border-neutral-200 dark:border-primary-700'
-                }`}
-            ></div>
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}; 
+// --- Other Styled Components ---
+export const Badge = ({ children, className = '' }: { children: ReactNode, className?: string }) => (
+  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gold-leaf/10 text-gold-leaf-light border border-gold-leaf/20 ${className}`}>
+    {children}
+  </span>
+);
+
+export const PageHeader = ({ title }: { title: string }) => (
+  <h1 className="text-5xl font-bold font-serif text-primary border-b-2 border-border pb-4 mb-8">{title}</h1>
+);

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 160" width="800" height="160">
+  <path id="inkPath" d="M20 80 C120 20, 240 140, 360 80 C480 20, 600 140, 780 80" fill="none" stroke="#0f0f0f" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" class="ink-path"/>
+</svg>

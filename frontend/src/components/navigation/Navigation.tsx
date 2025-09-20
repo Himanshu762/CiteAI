@@ -1,275 +1,323 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { 
-  ArrowRight, Moon, Sun, FilePlus, Library, ShieldCheck, 
-  Settings, User, Home, LogOut, ClipboardList, Quote, FolderPlus, 
-  Upload, SortDesc, CheckCircle, BookOpen, Search, Sparkles
+import { Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth, UserButton } from '@clerk/clerk-react';
+import {
+  Crown,
+  Menu,
+  X,
+  Settings,
+  Scroll,
+  BookOpen,
+  Star,
+  Sparkles,
 } from 'lucide-react';
-import { UserButton, useUser } from '@clerk/clerk-react';
-import { Logo } from '../ui/components';
 
-// Theme Toggle Component
-export const ThemeToggle = () => {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
-      if (savedTheme) {
-        return savedTheme;
-      }
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return 'light';
-  });
+import crest from '../../assets/crest.svg';
 
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+// Royal Logo Component (crest + wordmark)
+const RoyalLogo = ({ className = '' }: { className?: string }) => (
+  <div className={`flex items-center gap-3 ${className}`} aria-hidden>
+    <div className="relative w-10 h-10 flex-shrink-0">
+      <img src={crest} alt="Crest" className="w-10 h-10 object-contain" />
+      <motion.div
+        aria-hidden
+        className="absolute inset-0 rounded-full bg-gold-500/10"
+        animate={{ scale: [1, 1.06, 1], opacity: [0.5, 0.9, 0.5] }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      />
+    </div>
+    <span className="font-display text-2xl font-bold text-royal-gradient select-none">Cite<span className="text-gold-500">AI</span></span>
+  </div>
+);
 
-  return (
-    <button
-      onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-      className="p-2 rounded-lg bg-neutral hover:bg-neutral-200 dark:bg-primary dark:hover:bg-primary-700 transition-colors"
-      aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-    >
-      {theme === 'light' ? 
-        <Moon className="h-5 w-5 text-primary" /> : 
-        <Sun className="h-5 w-5 text-accent" />
-      }
-    </button>
-  );
-};
-
-// NavLink Component
-interface NavLinkProps {
-  to: string;
-  icon: React.ReactNode;
-  label: string;
-  className?: string;
-}
-
-export const NavLink = ({ to, icon, label, className = '' }: NavLinkProps) => {
-  const navigate = useNavigate();
-  return (
-    <button
-      onClick={() => navigate(to)}
-      className={`flex items-center space-x-2 text-primary hover:text-accent dark:text-neutral dark:hover:text-accent transition-colors ${className}`}
-    >
-      {icon}
-      <span className="font-medium">{label}</span>
-    </button>
-  );
-};
-
-// Icon-only navigation link component (without tooltip functionality)
-const NavIconLink = ({
+const NavLink = ({
   to,
-  icon,
-  label,
-  badge,
-  className = '',
-  isActive
+  children,
+  icon: Icon,
+  isActive = false,
+  onClick = () => {},
 }: {
   to: string;
-  icon: React.ReactNode;
-  label: string;
-  badge?: number;
-  className?: string;
+  children: React.ReactNode;
+  icon?: any;
   isActive?: boolean;
-}) => {
-  const location = useLocation();
-  const active = isActive !== undefined ? isActive : location.pathname.startsWith(to);
-  
-  return (
-    <Link
-      to={to}
-      className={`relative p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1 ${
-        active 
-          ? 'text-accent' 
-          : 'text-primary hover:text-accent hover:bg-neutral dark:text-neutral dark:hover:text-accent dark:hover:bg-primary-800'
-      } ${className}`}
-      aria-label={label}
-    >
-      {icon}
-      
-      {badge !== undefined && badge > 0 && (
-        <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 text-xs bg-red-500 text-white rounded-full">
-          {badge > 99 ? '99+' : badge}
-        </span>
-      )}
-    </Link>
-  );
-};
+  onClick?: () => void;
+}) => (
+  <Link
+    to={to}
+    onClick={onClick}
+    className={`relative px-4 py-2 rounded-lg font-serif font-medium transition-all duration-300 flex items-center gap-2 group
+      ${isActive ? 'text-gold-500 bg-gold-500/8' : 'text-parchment-200 hover:text-gold-400 hover:bg-gold-500/5'}`}
+  >
+    {Icon && <Icon className="w-4 h-4" />}
+    {children}
+    {isActive && (
+      <motion.div
+        className="absolute -bottom-1 left-2 right-2 h-0.5 bg-gold-500 rounded"
+        layoutId="activeNav"
+        initial={false}
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+      />
+    )}
+  </Link>
+);
 
-// Landing Header Component
-export const LandingHeader = () => {
-  const navigate = useNavigate();
-  const { isSignedIn, user } = useUser();
-  
-  const handleGetStarted = () => {
-    navigate('/sign-in');
-  };
+const MobileMenu = ({
+  isOpen,
+  onClose,
+  currentPath,
+  isSignedIn,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  currentPath: string;
+  isSignedIn: boolean;
+}) => (
+  <AnimatePresence>
+    {isOpen && (
+      <>
+        <motion.div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+        />
 
-  return (
-    <header className="w-full bg-gradient-to-r from-primary to-secondary shadow-lg sticky top-0 z-50 overflow-x-hidden">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <nav className="flex items-center justify-between py-4">
-          <div className="flex items-center space-x-24">
-            <Link to="/" className="flex items-center space-x-3">
-              <Logo className="h-8 w-8" />
-            </Link>
-            <div className="hidden md:flex items-center space-x-6">
-              <Link to="/features" className="text-neutral hover:text-accent transition">Features</Link>
-              
-              {isSignedIn && (
-                <>
-                  <Link to="/generate" className="text-neutral hover:text-accent transition">
-                    Generate Paper
+        <motion.aside
+          className="fixed top-0 right-0 h-full w-80 bg-gradient-to-b from-royal-navy to-royal-purple backdrop-blur-lg border-l border-gold-500/30 z-50 p-6"
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        >
+          <div className="flex justify-between items-center mb-8">
+            <RoyalLogo />
+            <button
+              onClick={onClose}
+              aria-label="Close menu"
+              className="p-2 rounded-lg bg-gold-500/10 text-gold-500 hover:bg-gold-500/20 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <nav className="space-y-4">
+            <NavLink to="/" isActive={currentPath === '/'} onClick={onClose}>
+              Home
+            </NavLink>
+            <NavLink to="/features" icon={Star} isActive={currentPath === '/features'} onClick={onClose}>
+              Features
+            </NavLink>
+            <NavLink to="/generate" icon={Scroll} isActive={currentPath === '/generate'} onClick={onClose}>
+              Generate Paper
+            </NavLink>
+            <NavLink to="/dashboard" icon={BookOpen} isActive={currentPath === '/dashboard'} onClick={onClose}>
+              Dashboard
+            </NavLink>
+
+            <div className="border-t border-gold-500/20 pt-4 mt-6">
+              {isSignedIn ? (
+                <div className="space-y-3">
+                  <NavLink to="/settings" icon={Settings} isActive={currentPath === '/settings'} onClick={onClose}>
+                    Settings
+                  </NavLink>
+                  <div className="flex items-center gap-3 px-4 py-2">
+                    <UserButton
+                      appearance={{
+                        elements: { avatarBox: 'w-8 h-8 border-2 border-gold-500/30' },
+                      }}
+                    />
+                    <span className="text-parchment-200 font-serif">Profile</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Link to="/sign-in" onClick={onClose}>
+                    <button className="w-full btn-outline-royal text-sm">Sign In</button>
                   </Link>
-                  <Link to="/library" className="text-neutral hover:text-accent transition">
-                    Library
+                  <Link to="/sign-up" onClick={onClose}>
+                    <button className="w-full btn-royal text-sm">Get Started</button>
                   </Link>
-                  <Link to="/dashboard" className="text-neutral hover:text-accent transition">
-                    Dashboard
-                  </Link>
-                </>
+                </div>
               )}
             </div>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <ThemeToggle />
+          </nav>
+        </motion.aside>
+      </>
+    )}
+  </AnimatePresence>
+);
 
-            {isSignedIn ? (
-              <div className="flex items-center">
-                <UserButton 
-                  afterSignOutUrl="/"
-                  appearance={{
-                    elements: {
-                      userButtonAvatarBox: "w-9 h-9",
-                      userButtonTrigger: "focus:shadow-none focus:outline-none",
-                      userButtonPopoverCard: "shadow-lg border border-neutral-200 dark:border-primary-700",
-                      userButtonPopoverActionButton: "text-sm",
-                      userButtonPopoverActionButtonText: "font-normal",
-                      userButtonPopoverFooter: "hidden"
-                    }
-                  }}
-                  userProfileUrl="/settings"
-                  userProfileMode="navigation"
-                />
-              </div>
-            ) : (
-              <button
-                onClick={handleGetStarted}
-                className="bg-accent hover:bg-accent-600 text-primary font-medium py-2 px-4 rounded-md transition-colors"
-              >
-                Sign In
-              </button>
-            )}
-          </div>
-        </nav>
-      </div>
-    </header>
-  );
-};
-
-// Dashboard Sidebar Component
-export const DashboardSidebar = () => {
-  const location = useLocation();
-  
-  // Helper to determine if current path matches
-  const isCurrentPath = (path: string) => location.pathname.startsWith(path);
-  
-  return (
-    <div className="fixed bottom-0 left-0 right-0 bg-neutral dark:bg-primary shadow-lg border-t border-neutral-200 dark:border-primary-700 p-3 z-40">
-      <div className="flex justify-around items-center">
-        {/* Main navigation items */}
-        <Link 
-          to="/dashboard" 
-          className={`flex flex-col items-center justify-center p-2 transition-colors ${isCurrentPath('/dashboard') ? 'text-accent' : 'text-gray-500 hover:text-accent'}`}
-        >
-          <Home size={20} />
-          <span className="text-xs mt-1">Dashboard</span>
-        </Link>
-        
-        <Link 
-          to="/generate" 
-          className={`flex flex-col items-center justify-center p-2 transition-colors ${isCurrentPath('/generate') ? 'text-accent' : 'text-gray-500 hover:text-accent'}`}
-        >
-          <FilePlus size={20} />
-          <span className="text-xs mt-1">New Paper</span>
-        </Link>
-        
-        <Link 
-          to="/library" 
-          className={`flex flex-col items-center justify-center p-2 transition-colors ${isCurrentPath('/library') ? 'text-accent' : 'text-gray-500 hover:text-accent'}`}
-        >
-          <Library size={20} />
-          <span className="text-xs mt-1">Library</span>
-        </Link>
-        
-        <Link 
-          to="/quality" 
-          className={`flex flex-col items-center justify-center p-2 transition-colors ${isCurrentPath('/quality') ? 'text-accent' : 'text-gray-500 hover:text-accent'}`}
-        >
-          <ShieldCheck size={20} />
-          <span className="text-xs mt-1">Quality</span>
-        </Link>
-        
-        <Link 
-          to="/settings" 
-          className={`flex flex-col items-center justify-center p-2 transition-colors ${isCurrentPath('/settings') ? 'text-accent' : 'text-gray-500 hover:text-accent'}`}
-        >
-          <Settings size={20} />
-          <span className="text-xs mt-1">Settings</span>
-        </Link>
-      </div>
-    </div>
-  );
-};
-
-// Dashboard Navbar Component
 export const DashboardNavbar = () => {
-  const { user } = useUser();
-  const navigate = useNavigate();
+  const auth = useAuth();
+  const isSignedIn = !!auth?.isSignedIn;
+  const location = useLocation();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
-    <nav className="fixed top-0 w-full bg-neutral dark:bg-primary shadow-sm z-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between py-3">
-        <div className="flex items-center space-x-24">
-          <Link to="/" className="flex items-center space-x-24">
-            <Logo className="h-8 w-8" />
-          </Link>
-          <div className="hidden lg:flex space-x-6">
-            <NavLink to="/generate" icon={<FilePlus size={18} />} label="New Paper" />
-            <NavLink to="/library" icon={<Library size={18} />} label="Library" />
-            <NavLink to="/quality" icon={<ShieldCheck size={18} />} label="Quality" />
-          </div>
-        </div>
+    <>
+      <motion.header
+        className={`fixed top-0 left-0 right-0 z-30 transition-all duration-300 ${
+          isScrolled ? 'backdrop-royal shadow-royal border-b border-gold-500/20' : 'bg-transparent'
+        }`}
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+      >
+        <div className="container-royal">
+          <div className="flex items-center justify-between h-20">
+            <Link to="/" className="hover-lift">
+              <RoyalLogo />
+            </Link>
 
-        <div className="flex items-center space-x-4">
-          <ThemeToggle />
-          <div className="flex items-center">
-            <UserButton 
-              afterSignOutUrl="/"
-              appearance={{
-                elements: {
-                  userButtonAvatarBox: "w-9 h-9",
-                  userButtonTrigger: "focus:shadow-none focus:outline-none",
-                  userButtonPopoverCard: "shadow-lg border border-neutral-200 dark:border-primary-700",
-                  userButtonPopoverActionButton: "text-sm",
-                  userButtonPopoverActionButtonText: "font-normal",
-                  userButtonPopoverFooter: "hidden"
-                }
-              }}
-              userProfileUrl="/settings"
-              userProfileMode="navigation"
-            />
+            <nav className="hidden lg:flex items-center space-x-2">
+              <NavLink to="/" isActive={location.pathname === '/'}>
+                Home
+              </NavLink>
+              <NavLink to="/features" icon={Star} isActive={location.pathname === '/features'}>
+                Features
+              </NavLink>
+              <NavLink to="/generate" icon={Scroll} isActive={location.pathname === '/generate'}>
+                Generate
+              </NavLink>
+              <NavLink to="/dashboard" icon={BookOpen} isActive={location.pathname === '/dashboard'}>
+                Dashboard
+              </NavLink>
+            </nav>
+
+            <div className="flex items-center gap-4">
+              <div className="hidden lg:flex items-center gap-3">
+                {isSignedIn ? (
+                  <div className="flex items-center gap-3">
+                    <Link to="/settings">
+                      <button className="btn-ghost-royal">
+                        <Settings className="w-4 h-4" />
+                      </button>
+                    </Link>
+                    <UserButton
+                      appearance={{
+                        elements: {
+                          avatarBox: 'w-10 h-10 border-2 border-gold-500/30 hover:border-gold-500/60 transition-colors',
+                        },
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Link to="/sign-in">
+                      <button className="btn-ghost-royal">Sign In</button>
+                    </Link>
+                    <Link to="/sign-up">
+                      <button className="btn-royal">
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Get Started
+                      </button>
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="lg:hidden p-2 rounded-lg bg-gold-500/10 text-gold-500 hover:bg-gold-500/20 transition-colors"
+                aria-label="Open menu"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </nav>
+      </motion.header>
+
+      <MobileMenu
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        currentPath={location.pathname}
+        isSignedIn={isSignedIn}
+      />
+    </>
   );
-}; 
+};
+
+export const LandingHeader = () => {
+  const auth = useAuth();
+  const isSignedIn = !!auth?.isSignedIn;
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <>
+      <motion.header
+        className={`fixed top-0 left-0 right-0 z-30 transition-all duration-300 ${
+          isScrolled ? 'backdrop-royal shadow-royal' : 'bg-gradient-to-b from-royal-midnight/80 to-transparent'
+        }`}
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+      >
+        <div className="container-royal">
+          <div className="flex items-center justify-between h-20">
+            <Link to="/" className="hover-lift">
+              <RoyalLogo />
+            </Link>
+
+            <nav className="hidden lg:flex items-center space-x-6">
+              <Link to="/features" className="text-parchment-200 hover:text-gold-400 font-serif transition-colors">
+                Features
+              </Link>
+            </nav>
+
+            <div className="flex items-center gap-4">
+              <div className="hidden lg:flex items-center gap-3">
+                {isSignedIn ? (
+                  <div className="flex items-center gap-3">
+                    <Link to="/dashboard">
+                      <button className="btn-ghost-royal">Dashboard</button>
+                    </Link>
+                    <UserButton />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Link to="/sign-in">
+                      <button className="btn-ghost-royal">Sign In</button>
+                    </Link>
+                    <Link to="/sign-up">
+                      <button className="btn-royal">
+                        <Crown className="w-4 h-4 mr-2" /> Begin Journey
+                      </button>
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="lg:hidden p-2 rounded-lg bg-gold-500/10 text-gold-500 hover:bg-gold-500/20 transition-colors"
+                aria-label="Open menu"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </motion.header>
+
+      <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} currentPath={'/'} isSignedIn={isSignedIn} />
+    </>
+  );
+};

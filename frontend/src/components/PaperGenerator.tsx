@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { UserButton } from '@clerk/clerk-react';
 
+import { Button, Input, Badge } from './ui/components';
+
 interface GeneratedPaper {
   sections: Record<string, string>;
   word_count: number;
@@ -67,13 +69,13 @@ export default function PaperGenerator() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral dark:bg-primary-900 p-8">
+    <div className="min-h-screen p-8 bg-background text-foreground">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-12">
           <motion.h1 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-4xl font-bold text-primary dark:text-neutral"
+            className="text-4xl font-bold text-primary"
           >
             Paper Generator
           </motion.h1>
@@ -83,30 +85,28 @@ export default function PaperGenerator() {
         <div className="grid md:grid-cols-2 gap-8">
           {/* Controls Column */}
           <motion.div 
-            className="bg-white dark:bg-primary-800 rounded-2xl p-6 shadow-xl"
+            className="royal-card rounded-2xl p-6 shadow-royal"
             initial={{ x: -50 }}
             animate={{ x: 0 }}
           >
             <div className="space-y-8">
               <div>
-                <label className="flex items-center text-lg font-semibold mb-4 text-primary dark:text-neutral">
-                  <Wand2 className="mr-2 h-6 w-6 text-accent" />
+                <label className="flex items-center text-lg font-semibold mb-4 text-parchment">
+                  <Wand2 className="mr-2 h-6 w-6 text-gold-500" />
                   Research Topic
                 </label>
-                <motion.input
+                <Input
                   type="text"
                   value={topic}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTopic(e.target.value)}
-                  className="w-full p-4 rounded-xl border-2 border-neutral-200 dark:border-primary-700 bg-neutral dark:bg-primary-700 text-primary dark:text-neutral focus:border-accent focus:ring-0"
+                  onChange={(e: any) => setTopic(e.target.value)}
                   placeholder="Enter your research topic..."
-                  whileFocus={{ scale: 1.02 }}
                   disabled={isGenerating}
                 />
               </div>
 
               <div>
-                <label className="flex items-center text-lg font-semibold mb-4 text-primary dark:text-neutral">
-                  <Sliders className="mr-2 h-6 w-6 text-accent" />
+                <label className="flex items-center text-lg font-semibold mb-4 text-parchment">
+                  <Sliders className="mr-2 h-6 w-6 text-gold-500" />
                   Word Limit
                 </label>
                 <div className="relative pt-8">
@@ -117,18 +117,18 @@ export default function PaperGenerator() {
                     step="500"
                     value={wordLimit}
                     onChange={(e) => setWordLimit(Number(e.target.value))}
-                    className="w-full h-2 bg-neutral-200 dark:bg-primary-700 rounded-lg appearance-none cursor-pointer accent-accent"
+                    className="w-full h-2 rounded-lg appearance-none cursor-pointer"
                     disabled={isGenerating}
                   />
-                  <div className="absolute top-0 right-0 text-lg font-bold text-accent">
+                  <div className="absolute top-0 right-0 text-lg font-bold text-gold-500">
                     {wordLimit.toLocaleString()} words
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="flex items-center text-lg font-semibold mb-4 text-primary dark:text-neutral">
-                  <LayoutList className="mr-2 h-6 w-6 text-accent" />
+                <label className="flex items-center text-lg font-semibold mb-4 text-parchment">
+                  <LayoutList className="mr-2 h-6 w-6 text-gold-500" />
                   Paper Sections
                 </label>
                 <div className="grid grid-cols-2 gap-4">
@@ -136,11 +136,11 @@ export default function PaperGenerator() {
                     'Results', 'Discussion', 'Conclusion', 'References'].map((section) => (
                     <motion.div
                       key={section}
-                      whileHover={{ scale: isGenerating ? 1 : 1.05 }}
+                      whileHover={{ scale: isGenerating ? 1 : 1.03 }}
                       className={`p-4 rounded-xl border-2 cursor-pointer transition-colors
                         ${selectedSections.includes(section) 
-                          ? 'border-accent bg-accent/10' 
-                          : 'border-neutral-200 dark:border-primary-700 hover:border-accent'}`}
+                          ? 'border-gold-500 bg-gold-500/8' 
+                          : 'border-border hover:border-gold-500'}`}
                       onClick={() => {
                         if (!isGenerating) {
                           setSelectedSections(prev =>
@@ -151,57 +151,70 @@ export default function PaperGenerator() {
                         }
                       }}
                     >
-                      {section}
+                      <div className="flex items-center justify-between">
+                        <span className="font-serif">{section}</span>
+                        {selectedSections.includes(section) && <Badge>Included</Badge>}
+                      </div>
                     </motion.div>
                   ))}
                 </div>
+              </div>
+
+              <div className="pt-4">
+                <Button onClick={generatePaper} disabled={isGenerating} size="lg" className="w-full font-display">
+                  {isGenerating ? (
+                    <> <Loader2 className="animate-spin mr-3" /> Generating... </>
+                  ) : (
+                    'Generate Paper'
+                  )}
+                </Button>
               </div>
             </div>
           </motion.div>
 
           {/* Preview Column */}
           <motion.div 
-            className="bg-white dark:bg-primary-800 rounded-2xl p-6 shadow-xl"
+            className="royal-card rounded-2xl p-6 shadow-royal"
             initial={{ x: 50 }}
             animate={{ x: 0 }}
           >
-            <div className="flex items-center text-lg font-semibold mb-6 text-primary dark:text-neutral">
-              <Cloud className="mr-2 h-6 w-6 text-accent" />
+            <div className="flex items-center text-lg font-semibold mb-6 text-parchment">
+              <Cloud className="mr-2 h-6 w-6 text-gold-500" />
               {generatedPaper ? 'Generated Paper' : 'Preview'}
             </div>
-            
+
             {error && (
-              <div className="rounded-xl bg-alert/10 border-2 border-alert p-4 mb-6">
+              <div className="rounded-xl bg-destructive/10 border-2 border-destructive p-4 mb-6">
                 <div className="flex items-start">
-                  <AlertCircle className="h-6 w-6 text-alert mr-2 flex-shrink-0 mt-0.5" />
-                  <p className="text-alert">{error}</p>
+                  <AlertCircle className="h-6 w-6 text-destructive mr-2 flex-shrink-0 mt-0.5" />
+                  <p className="text-destructive">{error}</p>
                 </div>
               </div>
             )}
 
             {!generatedPaper && !isGenerating && (
-              <div className="h-96 rounded-xl bg-neutral dark:bg-primary-700 border-2 border-dashed border-neutral-300 dark:border-primary-600 flex items-center justify-center">
-                <p className="text-primary/50 dark:text-neutral/50">Your generated paper will appear here</p>
+              <div className="h-96 rounded-xl bg-parchment border-2 border-dashed border-border flex items-center justify-center">
+                <p className="text-parchment/60">Your generated paper will appear here</p>
               </div>
             )}
 
             {isGenerating && (
-              <div className="h-96 rounded-xl bg-neutral dark:bg-primary-700 border-2 border-neutral-300 dark:border-primary-600 flex flex-col items-center justify-center">
-                <Loader2 className="h-12 w-12 text-accent animate-spin mb-4" />
-                <p className="text-primary dark:text-neutral font-medium">Generating your paper...</p>
-                <p className="text-primary/60 dark:text-neutral/60 text-sm mt-2">This may take a few moments</p>
+              <div className="h-96 rounded-xl bg-parchment border-2 border-border flex flex-col items-center justify-center">
+                <Loader2 className="h-12 w-12 text-gold-500 animate-spin mb-4" />
+                <p className="text-parchment font-medium">Generating your paper...</p>
+                <p className="text-parchment/60 text-sm mt-2">This may take a few moments</p>
               </div>
             )}
 
             {generatedPaper && (
-              <div className="h-96 rounded-xl bg-neutral dark:bg-primary-700 border-2 border-neutral-300 dark:border-primary-600 overflow-auto p-4">
+              <div className="h-96 rounded-xl bg-parchment border-2 border-border overflow-auto p-4">
                 <div className="mb-4 flex justify-between items-center">
-                  <h3 className="text-xl font-bold text-primary dark:text-neutral">{topic}</h3>
+                  <h3 className="text-xl font-bold text-parchment">{topic}</h3>
                   <div className="flex space-x-4">
-                    <div className="text-sm bg-accent/10 px-3 py-1 rounded-full text-accent">
+                    <div className="text-sm bg-gold-500/10 px-3 py-1 rounded-full text-gold-500">
                       {generatedPaper.word_count} words
                     </div>
-                    <div className="text-sm bg-accent/10 px-3 py-1 rounded-full text-accent">
+                    <div className="text-sm bg-gold-500/10 px-3 py-1 rounded-full text-gold-500">
                       Score: {generatedPaper.readability_score}/100
                     </div>
                   </div>
@@ -210,37 +223,32 @@ export default function PaperGenerator() {
                 <div className="space-y-4">
                   {Object.entries(generatedPaper.sections).map(([key, content]) => (
                     <div key={key} className="space-y-2">
-                      <h4 className="font-medium text-primary dark:text-neutral capitalize">{key}</h4>
-                      <p className="text-primary/70 dark:text-neutral/70 text-sm line-clamp-3">{content}</p>
+                      <h4 className="font-medium text-parchment capitalize">{key}</h4>
+                      <p className="text-parchment/80 text-sm line-clamp-3">{content}</p>
                     </div>
                   ))}
                 </div>
                 
                 <div className="mt-4 text-center">
-                  <p className="text-sm text-accent cursor-pointer hover:underline">
+                  <p className="text-sm text-gold-500 cursor-pointer hover:underline">
                     View full paper
                   </p>
                 </div>
               </div>
             )}
 
-            <motion.button
-              onClick={generatePaper}
-              disabled={isGenerating}
-              className={`mt-8 w-full bg-accent hover:bg-accent-600 text-primary px-8 py-4 rounded-lg text-lg font-semibold flex items-center justify-center transition-colors ${isGenerating ? 'opacity-70 cursor-not-allowed' : ''}`}
-              whileHover={isGenerating ? {} : { scale: 1.02 }}
-              whileTap={isGenerating ? {} : { scale: 0.98 }}
-              id="generate-content-btn"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="animate-spin mr-2 h-5 w-5" />
-                  Generating...
-                </>
-              ) : (
-                'Generate Paper'
-              )}
-            </motion.button>
+            <div className="mt-6">
+              <Button onClick={generatePaper} disabled={isGenerating} size="lg" className="w-full">
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2 h-5 w-5" />
+                    Generating...
+                  </>
+                ) : (
+                  'Generate Paper'
+                )}
+              </Button>
+            </div>
           </motion.div>
         </div>
       </div>
