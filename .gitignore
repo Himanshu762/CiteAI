@@ -27,5 +27,6 @@ dist-ssr
 
 *.env
 *.env.example
+frontend/*.env
 
 flutter_app
