@@ -1,5 +1,7 @@
 # CiteAI - Academic Paper Generator
 
+>it's still a wip
+
 This application generates academic papers on any topic using Google's Gemini AI. It's a frontend-only solution that interacts directly with the Gemini API.
 
 ## Features
