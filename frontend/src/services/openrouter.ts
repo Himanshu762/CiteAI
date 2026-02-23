@@ -5,27 +5,27 @@ export function extractSection(content: string, sectionTitle: string, allSection
   try {
     const pattern = new RegExp(`(?:^|\\n)(${sectionTitle}[:.\\s]*?)(?:\\n|$)`, 'i');
     const match = content.match(pattern);
-    
+
     if (!match || typeof match.index === 'undefined') {
       return "";
     }
-        
+
     const startIdx = match.index + match[0].length;
-    
+
     // Find the start of the next section to determine the end of the current one
     let endIdx = content.length;
     const currentSectionIndex = allSections.indexOf(sectionTitle);
 
     for (let i = currentSectionIndex + 1; i < allSections.length; i++) {
-        const nextSection = allSections[i];
-        const nextPattern = new RegExp(`(?:^|\\n)(${nextSection}[:.\\s]*?)(?:\\n|$)`, 'i');
-        const nextMatch = content.substring(startIdx).match(nextPattern);
-        if (nextMatch && typeof nextMatch.index !== 'undefined') {
-            endIdx = startIdx + nextMatch.index;
-            break; 
-        }
+      const nextSection = allSections[i];
+      const nextPattern = new RegExp(`(?:^|\\n)(${nextSection}[:.\\s]*?)(?:\\n|$)`, 'i');
+      const nextMatch = content.substring(startIdx).match(nextPattern);
+      if (nextMatch && typeof nextMatch.index !== 'undefined') {
+        endIdx = startIdx + nextMatch.index;
+        break;
+      }
     }
-    
+
     return content.substring(startIdx, endIdx).trim();
   } catch (error) {
     console.error(`Error extracting section ${sectionTitle}:`, error);
@@ -84,14 +84,14 @@ export async function generatePaper(params: GeneratePaperParams): Promise<Genera
         'HTTP-Referer': import.meta.env.VITE_API_URL || 'http://localhost:5173',
       },
       body: JSON.stringify({
-        model: "deepseek/deepseek-chat-v3.1:free",
+        model: "openai/gpt-oss-120b:free",
         messages: [{ role: "user", content: prompt }],
       }),
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || `API Error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -100,7 +100,7 @@ export async function generatePaper(params: GeneratePaperParams): Promise<Genera
     if (!content) {
       throw new Error("Received an empty response from the AI model.");
     }
-    
+
     const sections: PaperSections = {};
     for (const section of params.sections) {
       const sectionContent = extractSection(content, section, params.sections);

@@ -1,19 +1,25 @@
 import { createRoot } from 'react-dom/client'
-import { ClerkProvider, SignIn, SignUp } from '@clerk/clerk-react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import LandingPage from './components/LandingPage'
-import App from './App'
+import { Toaster } from 'react-hot-toast'
+import { AuthProvider } from './providers/auth-provider'
+
+// Wizard pages (new clean UI)
+import StartPage from './pages/wizard/StartPage'
+import ResearchPage from './pages/wizard/ResearchPage'
+import AnalyzePage from './pages/wizard/AnalyzePage'
+import ComposePage from './pages/wizard/ComposePage'
+import FinishPage from './pages/wizard/FinishPage'
+
+// Legacy pages (kept for compatibility)
+import GeneratePage from './pages/GeneratePage'
 import DashboardPage from './pages/Dashboard'
-import LogoDemo from './pages/LogoDemo'
-import FeaturesPage from './components/FeaturesPage'
+import Features from './pages/Features'
 import UserSettings from './pages/UserSettings'
+
 import './index.css'
-import 'react-hot-toast'
 import { Buffer } from 'buffer'
 import './fonts.css'
-import { Logo } from './components/ui/components'
 import { AuthFlow } from './components/AuthFlow'
-// <reference path="./types/react-yjs.d.ts" />
 
 // Browser-only process polyfill with proper typing
 declare global {
@@ -42,104 +48,28 @@ window.process = {
 window.Buffer = Buffer;
 
 createRoot(document.getElementById('root')!).render(
-  <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>
+  <AuthProvider>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        {/* Clean wizard flow */}
+        <Route path="/" element={<StartPage />} />
+        <Route path="/research" element={<ResearchPage />} />
+        <Route path="/analyze" element={<AnalyzePage />} />
+        <Route path="/compose" element={<ComposePage />} />
+        <Route path="/finish" element={<FinishPage />} />
+
+        {/* Legacy routes */}
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/generate" element={<App />} />
+        <Route path="/generate" element={<GeneratePage />} />
         <Route path="/library" element={<DashboardPage />} />
-        <Route path="/quality" element={<DashboardPage />} />
         <Route path="/settings" element={<UserSettings />} />
-        <Route path="/logo-demo" element={<LogoDemo />} />
-        <Route path="/features" element={<FeaturesPage />} />
+        <Route path="/features" element={<Features />} />
+
+        {/* Auth */}
         <Route path="/sign-in/*" element={<AuthFlow mode="sign-in" />} />
         <Route path="/sign-up/*" element={<AuthFlow mode="sign-up" />} />
-        <Route 
-          path="/sign-in/*" 
-          element={
-            <div className="flex min-h-screen flex-col items-center justify-center bg-primary py-12 px-4">
-              <div className="mb-8 flex items-center space-x-3">
-                <div className="flex items-center">
-                  <div className="ml-3">
-                    <span className="text-3xl font-bold text-neutral">Cite</span>
-                    <span className="text-3xl font-bold text-accent">AI</span>
-                  </div>
-                </div>
-              </div>
-              <div className="w-full max-w-md rounded-xl bg-primary-800 p-8 shadow-lg">
-                <h2 className="mb-2 text-center text-2xl font-bold text-neutral">Sign in</h2>
-                <p className="mb-6 text-center text-neutral/80">to continue to CiteAI</p>
-                <SignIn 
-                  routing="path" 
-                  path="/sign-in" 
-                  signUpUrl="/sign-up" 
-                  appearance={{
-                    elements: {
-                      rootBox: "w-full",
-                      card: "shadow-none rounded-none p-0 m-0 bg-transparent",
-                      headerTitle: "hidden",
-                      headerSubtitle: "text-neutral",
-                      formButtonPrimary: "bg-accent hover:bg-accent-600 text-primary font-semibold",
-                      footerActionLink: "text-accent hover:text-accent-600",
-                      formFieldLabel: "text-neutral",
-                      formFieldInput: "bg-primary-700 border-secondary text-neutral",
-                      socialButtonsBlockButton: "border-secondary text-neutral hover:bg-primary-700",
-                      socialButtonsProviderIcon: "w-6 h-6",
-                      formFieldAction: "text-accent hover:text-accent-600",
-                      footerActionText: "text-neutral/70",
-                      dividerText: "text-neutral/60",
-                      dividerLine: "bg-secondary/30"
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          } 
-        />
-        <Route 
-          path="/sign-up/*" 
-          element={
-            <div className="flex min-h-screen flex-col items-center justify-center bg-primary py-12 px-4">
-              <div className="mb-8 flex items-center space-x-3">
-                <div className="flex items-center">
-                  <div className="ml-3">
-                    <span className="text-3xl font-bold text-neutral">Cite</span>
-                    <span className="text-3xl font-bold text-accent">AI</span>
-                  </div>
-                </div>
-              </div>
-              <div className="w-full max-w-md rounded-xl bg-primary-800 p-8 shadow-lg">
-                <h2 className="mb-2 text-center text-2xl font-bold text-neutral">Sign up</h2>
-                <p className="mb-6 text-center text-neutral/80">create a CiteAI account</p>
-                <SignUp
-                  routing="path" 
-                  path="/sign-up" 
-                  signInUrl="/sign-in"
-                  appearance={{
-                    elements: {
-                      rootBox: "w-full",
-                      card: "shadow-none rounded-none p-0 m-0 bg-transparent",
-                      headerTitle: "hidden",
-                      headerSubtitle: "hidden",
-                      formButtonPrimary: "bg-accent hover:bg-accent-600 text-primary font-semibold",
-                      footerActionLink: "text-accent hover:text-accent-600",
-                      formFieldLabel: "text-neutral",
-                      formFieldInput: "bg-primary-700 border-secondary text-neutral",
-                      socialButtonsBlockButton: "border-secondary text-neutral hover:bg-primary-700",
-                      socialButtonsProviderIcon: "w-6 h-6",
-                      formFieldAction: "text-accent hover:text-accent-600",
-                      footerActionText: "text-neutral/70",
-                      dividerText: "text-neutral/60",
-                      dividerLine: "bg-secondary/30"
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          } 
-        />
       </Routes>
+      <Toaster position="bottom-right" />
     </BrowserRouter>
-  </ClerkProvider>
+  </AuthProvider>
 );

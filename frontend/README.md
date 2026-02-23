@@ -41,9 +41,14 @@ To keep the codebase clean, components are consolidated into a few key files:
 
 ## Environment Variables
 
-Create a `.env` file in the root directory with:
+Create a `.env` file in the root directory with your Firebase project config:
 ```
-VITE_CLERK_PUBLISHABLE_KEY=your_clerk_key
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
 ```
 
 ## Available Scripts
@@ -61,7 +66,7 @@ The frontend connects to a FastAPI backend at `http://localhost:8000`. Make sure
 - TypeScript
 - Vite
 - Tailwind CSS
-- Clerk for authentication
+- Firebase for authentication
 - React Router for navigation
 - Framer Motion for animations
 - Lucide React for icons

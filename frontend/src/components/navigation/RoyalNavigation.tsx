@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Crown, 
-  Menu, 
-  X, 
-  User, 
-  Settings, 
-  LogOut, 
+import {
+  Crown,
+  Menu,
+  X,
+  Settings,
   Scroll,
   BookOpen,
   Star,
-  Shield,
   Sparkles
 } from 'lucide-react';
-import { useAuth, UserButton } from '@clerk/clerk-react';
+import { useAuth } from '../../hooks/useAuth';
+import { UserMenu } from '../auth/UserMenu';
 import { Link, useLocation } from 'react-router-dom';
 
 // Royal Logo Component
@@ -32,26 +30,26 @@ const RoyalLogo = ({ className = "" }: { className?: string }) => (
 );
 
 // Navigation Link Component
-const NavLink = ({ 
-  to, 
-  children, 
-  icon: Icon, 
+const NavLink = ({
+  to,
+  children,
+  icon: Icon,
   isActive = false,
-  onClick = () => {}
-}: { 
-  to: string, 
-  children: React.ReactNode, 
+  onClick = () => { }
+}: {
+  to: string,
+  children: React.ReactNode,
   icon?: any,
   isActive?: boolean,
   onClick?: () => void
 }) => (
-  <Link 
-    to={to} 
+  <Link
+    to={to}
     onClick={onClick}
     className={`
       relative px-4 py-2 rounded-lg font-serif font-medium transition-all duration-300
-      ${isActive 
-        ? 'text-gold-500 bg-gold-500/10' 
+      ${isActive
+        ? 'text-gold-500 bg-gold-500/10'
         : 'text-parchment-200 hover:text-gold-400 hover:bg-gold-500/5'
       }
       flex items-center gap-2 group
@@ -71,14 +69,14 @@ const NavLink = ({
 );
 
 // Mobile Menu Component
-const MobileMenu = ({ 
-  isOpen, 
-  onClose, 
-  currentPath, 
-  isSignedIn 
-}: { 
-  isOpen: boolean, 
-  onClose: () => void, 
+const MobileMenu = ({
+  isOpen,
+  onClose,
+  currentPath,
+  isSignedIn
+}: {
+  isOpen: boolean,
+  onClose: () => void,
   currentPath: string,
   isSignedIn: boolean
 }) => (
@@ -93,7 +91,7 @@ const MobileMenu = ({
           exit={{ opacity: 0 }}
           onClick={onClose}
         />
-        
+
         {/* Mobile Menu Panel */}
         <motion.div
           className="fixed top-0 right-0 h-full w-80 bg-gradient-to-b from-royal-navy to-royal-purple backdrop-blur-lg border-l border-gold-500/30 z-50"
@@ -113,7 +111,7 @@ const MobileMenu = ({
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
+
             {/* Navigation Links */}
             <nav className="space-y-4">
               <NavLink to="/" isActive={currentPath === '/'} onClick={onClose}>
@@ -128,7 +126,7 @@ const MobileMenu = ({
               <NavLink to="/dashboard" icon={BookOpen} isActive={currentPath === '/dashboard'} onClick={onClose}>
                 Dashboard
               </NavLink>
-              
+
               <div className="border-t border-gold-500/20 pt-4 mt-6">
                 {isSignedIn ? (
                   <div className="space-y-3">
@@ -136,13 +134,7 @@ const MobileMenu = ({
                       Settings
                     </NavLink>
                     <div className="flex items-center gap-3 px-4 py-2">
-                      <UserButton 
-                        appearance={{
-                          elements: {
-                            avatarBox: "w-8 h-8 border-2 border-gold-500/30"
-                          }
-                        }}
-                      />
+                      <UserMenu />
                       <span className="text-parchment-200 font-serif">Profile</span>
                     </div>
                   </div>
@@ -190,8 +182,8 @@ export const DashboardNavbar = () => {
       <motion.header
         className={`
           fixed top-0 left-0 right-0 z-30 transition-all duration-300
-          ${isScrolled 
-            ? 'backdrop-royal shadow-royal border-b border-gold-500/20' 
+          ${isScrolled
+            ? 'backdrop-royal shadow-royal border-b border-gold-500/20'
             : 'bg-transparent'
           }
         `}
@@ -233,13 +225,7 @@ export const DashboardNavbar = () => {
                         <Settings className="w-4 h-4" />
                       </button>
                     </Link>
-                    <UserButton 
-                      appearance={{
-                        elements: {
-                          avatarBox: "w-10 h-10 border-2 border-gold-500/30 hover:border-gold-500/60 transition-colors"
-                        }
-                      }}
-                    />
+                    <UserMenu />
                   </div>
                 ) : (
                   <div className="flex items-center gap-3">
@@ -275,7 +261,7 @@ export const DashboardNavbar = () => {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
         currentPath={location.pathname}
-        isSignedIn={!!isSignedIn}
+        isSignedIn={isSignedIn}
       />
     </>
   );
@@ -301,8 +287,8 @@ export const LandingHeader = () => {
       <motion.header
         className={`
           fixed top-0 left-0 right-0 z-30 transition-all duration-300
-          ${isScrolled 
-            ? 'backdrop-royal shadow-royal' 
+          ${isScrolled
+            ? 'backdrop-royal shadow-royal'
             : 'bg-gradient-to-b from-royal-midnight/80 to-transparent'
           }
         `}
@@ -334,7 +320,7 @@ export const LandingHeader = () => {
                         Dashboard
                       </button>
                     </Link>
-                    <UserButton />
+                    <UserMenu />
                   </div>
                 ) : (
                   <div className="flex items-center gap-3">
@@ -370,7 +356,7 @@ export const LandingHeader = () => {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
         currentPath="/"
-        isSignedIn={!!isSignedIn}
+        isSignedIn={isSignedIn}
       />
     </>
   );

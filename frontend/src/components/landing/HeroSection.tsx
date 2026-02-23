@@ -1,4 +1,4 @@
-import { SignInButton } from "@clerk/clerk-react"
+import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Logo } from "../ui/components"
 import { ArrowRight, BookOpen, Sparkles } from "lucide-react"
@@ -35,14 +35,14 @@ export const HeroSection = () => (
       <div className="flex items-center ml-3">
         <Logo className="h-8 w-8" />
       </div>
-      <SignInButton>
+      <Link to="/sign-in">
         <button className="px-6 py-2 rounded-lg glass-royal text-parchment-100 hover:shadow-gold-glow transition-all font-medium">
           Sign In
         </button>
-      </SignInButton>
+      </Link>
     </nav>
 
-    <motion.div 
+    <motion.div
       className="hero-content text-center pt-24 px-4 container-royal max-w-5xl mx-auto relative z-10"
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
@@ -53,7 +53,7 @@ export const HeroSection = () => (
       <p className="text-xl text-parchment-200 mb-12 max-w-3xl mx-auto">
         Generate comprehensive research papers powered by AI while maintaining academic integrity and excellence.
       </p>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
         <div className="md:text-right">
           <PaperPreviewAnimation />
@@ -68,7 +68,7 @@ export const HeroSection = () => (
             </div>
             <p className="text-parchment-200">Advanced algorithms trained on academic papers ensure quality and accuracy.</p>
           </div>
-          
+
           <div className="mb-6">
             <div className="flex items-center mb-3">
               <div className="bg-gold-500/10 p-2 rounded-full mr-3">
@@ -78,16 +78,16 @@ export const HeroSection = () => (
             </div>
             <p className="text-parchment-200">Automatic citation generation in any academic style you need.</p>
           </div>
-          
-          <SignInButton>
-            <button 
+
+          <Link to="/sign-up">
+            <button
               className="btn-royal font-display mt-4 flex items-center"
               aria-label="Get Started"
             >
               Get Started
               <ArrowRight size={18} className="ml-2" />
             </button>
-          </SignInButton>
+          </Link>
         </div>
       </div>
 
