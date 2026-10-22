@@ -1,8 +1,10 @@
 /**
  * References API - Academic Paper Search
- * Uses CrossRef (free, no CORS) with fallback to OpenAlex as primary sources
- * Semantic Scholar has CORS issues from browser, so we use alternatives
+ * Uses OpenAlex (relevance-ranked, with abstracts) and falls back to CrossRef.
+ * Both are free, keyless and CORS-friendly.
  */
+
+import { completeLLM } from './llm';
 
 export interface Reference {
     id: string;
@@ -43,43 +45,28 @@ export interface SearchResult {
  * Primary: Google Scholar (with AI relevance scoring)
  * Fallback: CrossRef and OpenAlex
  */
-export async function searchReferences(params: ReferenceSearchParams & { topic?: string }): Promise<SearchResult> {
-    const { query, limit = 10, offset = 0, topic } = params;
-
-    // Try Google Scholar first (best relevance, but rate limited)
-    if (topic) {
-        try {
-            const { searchGoogleScholar } = await import('./google-scholar');
-            const scholarResults = await searchGoogleScholar(query, topic, limit);
-
-            if (scholarResults.length > 0) {
-                console.log('[References] Using Google Scholar results');
-                return {
-                    references: scholarResults,
-                    total: scholarResults.length,
-                    offset,
-                };
-            }
-        } catch (error) {
-            console.warn('[References] Google Scholar failed, falling back:', error);
-        }
-    }
+export async function searchReferences(params: ReferenceSearchParams & { topic?: string; fieldId?: string }): Promise<SearchResult> {
+    const { query, limit = 10, offset = 0, fieldId } = params;
 
     try {
-        // Fallback to CrossRef - has no CORS issues
-        const crossRefResults = await searchCrossRef(query, limit);
-
-        if (crossRefResults.length > 0) {
-            return {
-                references: crossRefResults,
-                total: crossRefResults.length,
-                offset,
-            };
+        // OpenAlex first: relevance-ranked, includes abstracts and citation counts, CORS-friendly
+        const openAlexResults = await searchOpenAlex(query, limit, offset, fieldId);
+        if (openAlexResults.references.length > 0) {
+            return openAlexResults;
+        }
+        // A field filter can be too narrow for interdisciplinary queries; retry without it
+        if (fieldId) {
+            const unfiltered = await searchOpenAlex(query, limit, offset);
+            if (unfiltered.references.length > 0) return unfiltered;
         }
 
-        // Fallback to OpenAlex (also CORS-friendly)
-        return await searchOpenAlex(query, limit, offset);
-
+        // Fallback to CrossRef - has no CORS issues
+        const crossRefResults = await searchCrossRef(query, limit);
+        return {
+            references: crossRefResults,
+            total: crossRefResults.length,
+            offset,
+        };
     } catch (error) {
         console.error('Reference search error:', error);
         // Return empty results on error, don't throw
@@ -113,9 +100,9 @@ async function searchCrossRef(query: string, limit: number): Promise<Reference[]
                 item['published-online']?.['date-parts']?.[0]?.[0] ||
                 item['created']?.['date-parts']?.[0]?.[0];
 
-            const authors = (item.author || []).map((a: any) => ({
-                name: `${a.given || ''} ${a.family || ''}`.trim() || 'Unknown',
-            }));
+            const authors = (item.author || [])
+                .map((a: any) => ({ name: `${a.given || ''} ${a.family || ''}`.trim() || a.name || '' }))
+                .filter((a: Author) => a.name);
 
             const doi = item.DOI;
 
@@ -123,7 +110,7 @@ async function searchCrossRef(query: string, limit: number): Promise<Reference[]
                 id: doi || `crossref-${Math.random().toString(36).slice(2)}`,
                 title: Array.isArray(item.title) ? item.title[0] : item.title || 'Untitled',
                 authors,
-                year: year || 2023,
+                year: year || 0, // 0 is cited as "n.d."
                 venue: item['container-title']?.[0] || '',
                 abstract: item.abstract?.replace(/<[^>]*>/g, '').slice(0, 500) || '',
                 doi,
@@ -143,10 +130,11 @@ async function searchCrossRef(query: string, limit: number): Promise<Reference[]
  * Search OpenAlex for academic papers
  * Free API, no authentication needed for basic use
  */
-async function searchOpenAlex(query: string, limit: number, offset: number): Promise<SearchResult> {
+async function searchOpenAlex(query: string, limit: number, offset: number, fieldId?: string): Promise<SearchResult> {
     try {
+        const filter = fieldId ? `&filter=primary_topic.field.id:${encodeURIComponent(fieldId)}` : '';
         const response = await fetch(
-            `https://api.openalex.org/works?search=${encodeURIComponent(query)}&per-page=${limit}&page=${Math.floor(offset / limit) + 1}`,
+            `https://api.openalex.org/works?search=${encodeURIComponent(query)}${filter}&per-page=${limit}&page=${Math.floor(offset / limit) + 1}`,
             {
                 headers: {
                     'Accept': 'application/json',
@@ -161,16 +149,15 @@ async function searchOpenAlex(query: string, limit: number, offset: number): Pro
         const data = await response.json();
 
         const references: Reference[] = (data.results || []).map((work: any) => {
-            const authors = (work.authorships || []).map((a: any) => ({
-                name: a.author?.display_name || 'Unknown',
-                authorId: a.author?.id,
-            }));
+            const authors = (work.authorships || [])
+                .map((a: any) => ({ name: a.author?.display_name || '', authorId: a.author?.id }))
+                .filter((a: Author) => a.name);
 
             return {
                 id: work.id || `openalex-${Math.random().toString(36).slice(2)}`,
                 title: work.title || 'Untitled',
                 authors,
-                year: work.publication_year || 2023,
+                year: work.publication_year || 0, // 0 is cited as "n.d."
                 venue: work.primary_location?.source?.display_name || '',
                 abstract: work.abstract_inverted_index
                     ? reconstructAbstract(work.abstract_inverted_index)
@@ -227,14 +214,13 @@ export function getPaperUrl(reference: Reference): string {
  * Generate smart search queries for a research topic using AI
  * Extracts key concepts that are more likely to find relevant academic papers
  */
-export async function generateReferenceQueries(topic: string): Promise<string[]> {
+export async function generateReferenceQueries(topic: string, discipline?: string): Promise<string[]> {
     try {
-        const { geminiCompletion, GEMINI_MODELS } = await import('./gemini-api');
 
         const prompt = `For this research topic, generate 3 academic search queries that would find the MOST RELEVANT papers.
 
 Research Topic: "${topic}"
-
+${discipline ? `Field: ${discipline} (use this field's terminology)\n` : ''}
 Guidelines:
 - Extract the CORE CONCEPTS, not individual words
 - Combine related concepts into searchable phrases
@@ -256,7 +242,7 @@ Bad queries:
 Respond with ONLY a JSON array of 3 search queries:
 ["query1", "query2", "query3"]`;
 
-        const result = await geminiCompletion(prompt, GEMINI_MODELS.FLASH);
+        const result = await completeLLM(prompt);
         const jsonMatch = result.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
             const queries = JSON.parse(jsonMatch[0]);
@@ -274,15 +260,15 @@ Respond with ONLY a JSON array of 3 search queries:
  * Get recommended papers based on a topic using AI-generated queries
  * Searches using multiple concept-based queries and merges results
  */
-export async function getAIRecommendedPapers(topic: string): Promise<Reference[]> {
-    const queries = await generateReferenceQueries(topic);
+export async function getAIRecommendedPapers(topic: string, fieldId?: string, discipline?: string): Promise<Reference[]> {
+    const queries = await generateReferenceQueries(topic, discipline);
     const allRefs: Reference[] = [];
     const seenIds = new Set<string>();
 
     // Search with each query
     for (const query of queries.slice(0, 3)) {
         try {
-            const result = await searchReferences({ query, limit: 5 });
+            const result = await searchReferences({ query, limit: 5, fieldId });
             for (const ref of result.references) {
                 if (!seenIds.has(ref.id)) {
                     seenIds.add(ref.id);

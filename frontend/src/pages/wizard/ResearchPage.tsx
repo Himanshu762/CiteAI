@@ -5,19 +5,20 @@ import { useNavigate } from 'react-router-dom';
 import { useWizardStore } from '../../lib/store/use-wizard-store';
 import { useResearchStore } from '../../lib/store/use-research-store';
 import { searchReferences, Reference, getPaperUrl, getAIRecommendedPapers } from '../../services/references-api';
-import { geminiCompletion, GEMINI_MODELS } from '../../services/gemini-api';
+import { completeLLM } from '../../services/llm';
 import toast from 'react-hot-toast';
+import { disciplineName } from '../../services/disciplines';
 
 export default function ResearchPage() {
     const navigate = useNavigate();
-    const { topic, researchGaps, researchQuestions, setResearchGaps, setResearchQuestions, isAnalyzingTopic, setAnalyzingTopic, setStage } = useWizardStore();
+    const { topic, fieldId, researchGaps, researchQuestions, setResearchGaps, setResearchQuestions, isAnalyzingTopic, setAnalyzingTopic, setStage } = useWizardStore();
+    const discipline = disciplineName(fieldId);
     const { paperContext, addReferenceToContext, removeReferenceFromContext } = useResearchStore();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<Reference[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [autoFetched, setAutoFetched] = useState(false);
-    const [showManualSearch, setShowManualSearch] = useState(false);
     const [activeTab, setActiveTab] = useState<'gaps' | 'questions' | 'references'>('gaps');
 
     // Redirect if no topic
@@ -48,7 +49,7 @@ export default function ResearchPage() {
         try {
             toast('Finding relevant references with AI...');
             // Use AI-powered multi-concept search
-            const references = await getAIRecommendedPapers(topic);
+            const references = await getAIRecommendedPapers(topic, fieldId || undefined, discipline);
             setSearchResults(references);
 
             // Auto-select top 5 (already sorted by AI/citation count)
@@ -76,7 +77,7 @@ export default function ResearchPage() {
             const prompt = `You are an expert academic researcher. Analyze this research topic and identify key research areas.
 
 Topic: "${topic}"
-
+${discipline ? `Field: ${discipline}\n` : ''}
 Provide a JSON response with:
 1. "gaps" - 3-4 research gaps (areas that need more study). Each with "title" and "description"
 2. "questions" - 4-5 specific research questions. Each with "question" text
@@ -87,7 +88,7 @@ IMPORTANT: Respond ONLY with valid JSON, no other text:
     "questions": [{"question": "..."}]
 }`;
 
-            const result = await geminiCompletion(prompt, GEMINI_MODELS.FLASH);
+            const result = await completeLLM(prompt);
 
             // Parse JSON from response
             const jsonMatch = result.match(/\{[\s\S]*\}/);
@@ -128,12 +129,12 @@ IMPORTANT: Respond ONLY with valid JSON, no other text:
         setIsSearching(true);
         try {
             // Pass topic for AI-powered relevance scoring
-            const result = await searchReferences({ query: queryToSearch, limit: 10, topic });
+            const result = await searchReferences({ query: queryToSearch, limit: 10, topic, fieldId: fieldId || undefined });
             setSearchResults(result.references);
             if (result.references.length === 0) {
                 toast('No papers found. Try different keywords.');
             }
-        } catch (error) {
+        } catch {
             toast.error('Search failed');
         } finally {
             setIsSearching(false);
@@ -426,7 +427,7 @@ IMPORTANT: Respond ONLY with valid JSON, no other text:
                                                     <p className="text-xs text-zinc-500">
                                                         {ref.authors.slice(0, 3).map(a => a.name).join(', ')}
                                                         {ref.authors.length > 3 && ` +${ref.authors.length - 3}`}
-                                                        {ref.year && ` • ${ref.year}`}
+                                                        {ref.year > 0 && ` • ${ref.year}`}
                                                         {ref.citationCount !== undefined && ref.citationCount > 0 && ` • ${ref.citationCount} citations`}
                                                     </p>
                                                     {ref.abstract && (

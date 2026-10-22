@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Reference } from '../../services/references-api';
 import { Dataset, DatasetAnalysis } from '../../services/dataset-finder';
+import type { AnalysisReport } from '../../services/data-analysis/report';
+
+export interface AutoAnalysisStatus {
+    topic: string;
+    status: 'not-needed' | 'no-dataset' | 'done' | 'error';
+    message: string;
+}
 
 // Paper context - selected research for generation
 export interface PaperResearchContext {
@@ -9,6 +16,7 @@ export interface PaperResearchContext {
     selectedDatasets: Dataset[];
     datasetAnalyses: Map<string, DatasetAnalysis>;
     researchNotes: string;
+    analysisReports: AnalysisReport[];
 }
 
 interface ResearchState {
@@ -36,6 +44,10 @@ interface ResearchState {
     // Paper research context (for generation)
     paperContext: PaperResearchContext;
 
+    // Outcome of the last automatic analysis, so revisiting the page doesn't rerun it
+    lastAutoAnalysis: AutoAnalysisStatus | null;
+    setLastAutoAnalysis: (status: AutoAnalysisStatus | null) => void;
+
     // Actions
     setReferenceQuery: (query: string) => void;
     setReferenceResults: (results: Reference[]) => void;
@@ -59,6 +71,9 @@ interface ResearchState {
     addDatasetToContext: (dataset: Dataset, analysis?: DatasetAnalysis) => void;
     removeDatasetFromContext: (datasetId: string) => void;
     addDatasetAnalysis: (datasetId: string, analysis: DatasetAnalysis) => void;
+    addAnalysisReport: (report: AnalysisReport) => void;
+    removeAnalysisReport: (reportId: string) => void;
+    toggleReportInPaper: (reportId: string) => void;
     setResearchNotes: (notes: string) => void;
     clearPaperContext: () => void;
     isReferenceSelected: (refId: string) => boolean;
@@ -74,6 +89,7 @@ const emptyPaperContext: PaperResearchContext = {
     selectedDatasets: [],
     datasetAnalyses: new Map(),
     researchNotes: '',
+    analysisReports: [],
 };
 
 export const useResearchStore = create<ResearchState>()(
@@ -97,6 +113,8 @@ export const useResearchStore = create<ResearchState>()(
             recentDatasetSearches: [],
 
             paperContext: { ...emptyPaperContext },
+            lastAutoAnalysis: null,
+            setLastAutoAnalysis: (status) => set({ lastAutoAnalysis: status }),
 
             setReferenceQuery: (query) => set({ referenceQuery: query }),
 
@@ -189,6 +207,33 @@ export const useResearchStore = create<ResearchState>()(
                 };
             }),
 
+            addAnalysisReport: (report) => set((state) => ({
+                paperContext: {
+                    ...state.paperContext,
+                    // One report per dataset: re-analyzing replaces the old one
+                    analysisReports: [
+                        report,
+                        ...(state.paperContext.analysisReports ?? []).filter(r => r.dataset.id !== report.dataset.id),
+                    ],
+                },
+            })),
+
+            removeAnalysisReport: (reportId) => set((state) => ({
+                paperContext: {
+                    ...state.paperContext,
+                    analysisReports: (state.paperContext.analysisReports ?? []).filter(r => r.id !== reportId),
+                },
+            })),
+
+            toggleReportInPaper: (reportId) => set((state) => ({
+                paperContext: {
+                    ...state.paperContext,
+                    analysisReports: (state.paperContext.analysisReports ?? []).map(r =>
+                        r.id === reportId ? { ...r, includeInPaper: !r.includeInPaper } : r
+                    ),
+                },
+            })),
+
             addDatasetAnalysis: (datasetId, analysis) => set((state) => {
                 const newAnalyses = new Map(state.paperContext.datasetAnalyses);
                 newAnalyses.set(datasetId, analysis);
@@ -244,6 +289,7 @@ export const useResearchStore = create<ResearchState>()(
                 datasetAnalysis: null,
                 isAnalyzingDataset: false,
                 paperContext: { ...emptyPaperContext },
+                lastAutoAnalysis: null,
             }),
         }),
         {
@@ -251,13 +297,29 @@ export const useResearchStore = create<ResearchState>()(
             partialize: (state) => ({
                 recentReferenceSearches: state.recentReferenceSearches,
                 recentDatasetSearches: state.recentDatasetSearches,
+                lastAutoAnalysis: state.lastAutoAnalysis,
                 paperContext: {
                     selectedReferences: state.paperContext.selectedReferences,
                     selectedDatasets: state.paperContext.selectedDatasets,
                     researchNotes: state.paperContext.researchNotes,
+                    analysisReports: state.paperContext.analysisReports,
                     // Note: Map doesn't serialize well, so analyses won't persist
                 },
             }),
+            // Saved state only holds part of paperContext; fill the rest with defaults
+            merge: (persisted, current) => {
+                const saved = (persisted ?? {}) as Partial<ResearchState>;
+                return {
+                    ...current,
+                    ...saved,
+                    paperContext: {
+                        ...emptyPaperContext,
+                        ...saved.paperContext,
+                        datasetAnalyses: new Map(),
+                        analysisReports: saved.paperContext?.analysisReports ?? [],
+                    },
+                };
+            },
         }
     )
 );

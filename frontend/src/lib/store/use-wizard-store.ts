@@ -22,6 +22,7 @@ interface WizardState {
 
     // Start stage
     topic: string;
+    fieldId: string; // OpenAlex field id; '' means any field
 
     // Research stage
     researchGaps: ResearchGap[];
@@ -33,6 +34,7 @@ interface WizardState {
 
     // Actions
     setTopic: (topic: string) => void;
+    setFieldId: (fieldId: string) => void;
     setStage: (stage: WizardStage) => void;
     nextStage: () => void;
     prevStage: () => void;
@@ -53,6 +55,7 @@ const stageOrder: WizardStage[] = ['start', 'research', 'data', 'write', 'finish
 const initialState = {
     currentStage: 'start' as WizardStage,
     topic: '',
+    fieldId: '',
     researchGaps: [],
     researchQuestions: [],
     isAnalyzingTopic: false,
@@ -72,6 +75,8 @@ export const useWizardStore = create<WizardState>()(
                 researchQuestions: [],
                 isAnalyzingTopic: false,
             }),
+
+            setFieldId: (fieldId) => set({ fieldId }),
 
             setStage: (stage) => set({ currentStage: stage }),
 
@@ -108,12 +113,14 @@ export const useWizardStore = create<WizardState>()(
 
             setAnalyzingTopic: (analyzing) => set({ isAnalyzingTopic: analyzing }),
 
-            reset: () => set(initialState),
+            // A student's field usually stays the same from paper to paper
+            reset: () => set({ ...initialState, fieldId: get().fieldId }),
         }),
         {
             name: 'citeai-wizard',
             partialize: (state) => ({
                 topic: state.topic,
+                fieldId: state.fieldId,
                 currentStage: state.currentStage,
                 researchGaps: state.researchGaps,
                 researchQuestions: state.researchQuestions,

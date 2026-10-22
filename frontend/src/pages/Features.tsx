@@ -204,7 +204,7 @@ export default function Features() {
               Start generating academic papers with AI assistance, unlimited plagiarism checking, and smart humanization.
             </p>
             <Link
-              to="/generate"
+              to="/"
               className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
             >
               <Sparkles size={20} />

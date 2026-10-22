@@ -1,14 +1,15 @@
-import { streamGeminiCompletion, geminiCompletion, GEMINI_MODELS } from './gemini-api';
-import { streamChatCompletion } from './openrouter-stream';
+import { completeLLM, streamLLM } from './llm';
 import { Reference } from './references-api';
 import { Dataset, DatasetAnalysis } from './dataset-finder';
-
-// Model configurations
-export const PAPER_MODELS = {
-    OPENROUTER_GPT: 'openai/gpt-oss-120b:free',  // Best for long-form paper writing
-    GEMINI_FLASH: 'gemini-flash',                  // Fast, good for drafts
-    GEMINI_PRO: 'gemini-pro',                      // Best quality Gemini
-} as const;
+import {
+    CitationStyle, CITATION_STYLES, formatDatasetCitation, formatInTextCitation, formatNarrativeCitation, generateStyledReferenceList,
+    isNumberedStyle, renumberCitations,
+} from './citation-formatter';
+import { AnalysisReport, ReportTable, reportTables, reportToPromptContext } from './data-analysis/report';
+import { WRITING_GUIDE } from './writing/style-guide';
+import { generateOutline, outlineForSection, PaperOutline } from './writing/outline';
+import { polishSection } from './writing/polish';
+import { cleanupText, DashStyle } from './writing/style-cleanup';
 
 export interface PaperSection {
     id: string;
@@ -17,6 +18,7 @@ export interface PaperSection {
     isGenerating: boolean;
     isComplete: boolean;
     wordCount: number;
+    tables?: ReportTable[];
 }
 
 export interface GenerationProgress {
@@ -32,13 +34,34 @@ export interface ResearchContext {
     selectedDatasets: Dataset[];
     datasetAnalyses: Map<string, DatasetAnalysis>;
     researchNotes: string;
+    researchGaps?: { title: string; description: string }[];
+    researchQuestions?: string[];
+    analysisReports?: AnalysisReport[];
+    discipline?: string;
+}
+
+function includedReports(context?: ResearchContext): AnalysisReport[] {
+    return (context?.analysisReports ?? []).filter(r => r.includeInPaper && r.results.length > 0);
+}
+
+/** Reference-list entry for an analyzed dataset */
+export function formatDatasetReference(report: AnalysisReport, style: CitationStyle = 'apa'): string {
+    return formatDatasetCitation(report.dataset, style);
+}
+
+/** Section that carries the analysis tables: Results if present, otherwise Discussion */
+function tableSection(sections: string[]): string | undefined {
+    return ['Results', 'Discussion'].find(name => sections.includes(name));
 }
 
 export interface PaperGenerationOptions {
     topic: string;
     wordLimit: number;
     sections: string[];
-    model?: string;
+    provider?: string; // Preferred AI provider id; undefined lets the gateway choose
+    citationStyle?: CitationStyle;
+    polish?: boolean; // Rewrite sentences with stock phrases (checked edit pass); default true
+    dashStyle?: DashStyle; // Em-dash handling in the deterministic cleanup; default 'replace'
     researchContext?: ResearchContext;
     onProgress?: (progress: GenerationProgress) => void;
     onSectionStart?: (sectionName: string) => void;
@@ -54,6 +77,10 @@ export interface GeneratedPaper {
     totalWordCount: number;
     generatedAt: Date;
     model: string;
+    citationStyle: CitationStyle;
+    thesis?: string;
+    sources: Reference[];   // In reference-list order (citation order for numbered styles)
+    datasets: { id: string; title: string; url: string }[];
 }
 
 export const DEFAULT_SECTIONS = [
@@ -67,71 +94,152 @@ export const DEFAULT_SECTIONS = [
     'References',
 ];
 
+// Sections whose prompts should see the research framing / the data
+const FRAMING_SECTIONS = ['Abstract', 'Introduction', 'Literature Review', 'Discussion', 'Conclusion'];
+const DATA_SECTIONS = ['Abstract', 'Methodology', 'Results', 'Discussion'];
+
+/**
+ * Describe a dataset analysis in a few lines the model can quote numbers from
+ */
+function describeAnalysis(dataset: Dataset, analysis?: DatasetAnalysis): string {
+    let text = `- ${dataset.title} (${dataset.source}, ${dataset.url})`;
+    if (!analysis) return text + ': not analyzed; describe it only qualitatively.\n';
+
+    const { totalRows, totalColumns, missingValues } = analysis.summary;
+    text += `: sample of ${totalRows} rows, ${totalColumns} columns, ${missingValues} missing values.\n`;
+    for (const col of analysis.columns.slice(0, 12)) {
+        if (col.type === 'numeric' && col.mean !== undefined) {
+            text += `    ${col.name}: numeric, mean ${col.mean.toFixed(3)}, min ${col.min}, max ${col.max}\n`;
+        } else if (col.topValues?.length) {
+            const top = col.topValues.slice(0, 3).map(v => `${v.value} (${v.count})`).join(', ');
+            text += `    ${col.name}: ${col.type}, ${col.unique} unique, most common: ${top}\n`;
+        }
+    }
+    return text;
+}
+
+export interface SectionPromptContext {
+    topic: string;
+    wordTarget: number;
+    researchContext?: ResearchContext;
+    previousContent?: string;
+    attachTables?: boolean;
+    style?: CitationStyle;
+    outline?: PaperOutline | null;
+}
+
 /**
  * Build the full prompt for a section
  */
-function buildSectionPrompt(
-    sectionName: string,
-    topic: string,
-    wordLimit: number,
-    totalSections: number,
-    researchContext?: ResearchContext,
-    previousContent?: string
-): string {
-    const sectionWordTarget = Math.round(wordLimit / totalSections);
+export function buildSectionPrompt(sectionName: string, ctx: SectionPromptContext): string {
+    const { topic, wordTarget, researchContext, previousContent, attachTables = false, style = 'apa', outline } = ctx;
+    const refs = researchContext?.selectedReferences ?? [];
+    const datasets = researchContext?.selectedDatasets ?? [];
 
     let contextInfo = '';
 
-    if (researchContext) {
-        if (researchContext.selectedReferences.length > 0) {
-            contextInfo += '\n\nResearch References to cite:\n';
-            researchContext.selectedReferences.forEach(ref => {
-                const authors = ref.authors.map(a => a.name).slice(0, 2).join(', ');
-                contextInfo += `- ${ref.title} (${authors}, ${ref.year})\n`;
-            });
-        }
+    if (researchContext?.discipline) {
+        contextInfo += `\nField: ${researchContext.discipline}. Use this field's terminology, methods and conventions.\n`;
+    }
 
-        if (researchContext.selectedDatasets.length > 0) {
-            contextInfo += '\n\nDatasets to reference:\n';
-            researchContext.selectedDatasets.forEach(ds => {
-                contextInfo += `- ${ds.title}: ${ds.description.slice(0, 100)}\n`;
-            });
+    if (outline) {
+        contextInfo += outlineForSection(outline, sectionName);
+    }
+
+    if (refs.length > 0) {
+        contextInfo += `\n\nSources you may cite (cite ONLY these, in ${CITATION_STYLES[style].label} style, using exactly the narrative / parenthetical forms shown${isNumberedStyle(style) ? '; cite by the bracketed number' : ''}):\n`;
+        refs.forEach((ref, i) => {
+            const abstract = ref.abstract ? ` Abstract: ${ref.abstract.slice(0, 400)}` : '';
+            const forms = `${formatNarrativeCitation(ref, style, i + 1)} / ${formatInTextCitation(ref, style, i + 1)}`.replace(/\*/g, '');
+            contextInfo += `- ${forms}: "${ref.title}".${abstract}\n`;
+        });
+    }
+
+    if (FRAMING_SECTIONS.includes(sectionName)) {
+        const gaps = researchContext?.researchGaps ?? [];
+        const questions = researchContext?.researchQuestions ?? [];
+        if (gaps.length > 0) {
+            contextInfo += '\nResearch gaps this paper addresses:\n';
+            gaps.forEach(g => { contextInfo += `- ${g.title}: ${g.description}\n`; });
+        }
+        if (questions.length > 0) {
+            contextInfo += '\nResearch questions:\n';
+            questions.forEach((q, i) => { contextInfo += `${i + 1}. ${q}\n`; });
         }
     }
+
+    const reports = includedReports(researchContext);
+    if (DATA_SECTIONS.includes(sectionName) && reports.length > 0) {
+        contextInfo += '\nOriginal data analysis performed for this paper (report these findings exactly; they are the only numbers you may state):\n';
+        reports.forEach(report => { contextInfo += reportToPromptContext(report) + '\n'; });
+        if (attachTables) {
+            const tables = reports.flatMap(reportTables);
+            contextInfo += '\nThese tables appear at the end of this section; refer to them by number:\n';
+            tables.forEach((t, i) => { contextInfo += `Table ${i + 1}: ${t.caption}\n`; });
+        }
+    }
+
+    if (DATA_SECTIONS.includes(sectionName) && datasets.length > 0) {
+        contextInfo += '\nDatasets and their measured statistics (the only numbers you may report):\n';
+        datasets.forEach(ds => {
+            contextInfo += describeAnalysis(ds, researchContext?.datasetAnalyses?.get(ds.id));
+        });
+    }
+
+    if (researchContext?.researchNotes) {
+        contextInfo += `\nAuthor notes:\n${researchContext.researchNotes}\n`;
+    }
+
+    const integrityRules = `
+Integrity rules:
+- ${refs.length > 0
+        ? 'Cite only the sources listed below. Never invent authors, titles, years or DOIs.'
+        : 'No literature sources were provided, so do not cite any papers or authors.'}
+- Never invent statistics, sample sizes, p-values or results. Only report numbers given in the data analysis or dataset statistics below${sectionName === 'Results' ? '; if none are given, describe the planned analysis and expected outcomes instead of reporting findings' : ''}.
+- When reporting the data analysis, cite the dataset by name and state its limitations.
+- Write plain prose paragraphs separated by blank lines. No Markdown, headings, bold or bullet symbols.
+- Do NOT include the section title; start directly with the content.`;
 
     if (sectionName === 'Abstract') {
-        return `You are an expert academic writer. Write a compelling abstract for a research paper on: "${topic}"
+        return `You are an expert academic writer. Write the abstract for a research paper on: "${topic}"
 
 Requirements:
-- Write 150-300 words
-- Summarize research problem, methodology, key findings, and conclusions
-- Use formal academic language
-- Do NOT include the section title, start directly with content
+- Write 150-250 words in one paragraph
+- State the problem, approach, key findings (with their numbers, if any) and the main conclusion
+${WRITING_GUIDE}
+${integrityRules}
 ${contextInfo}`;
-    }
-
-    if (sectionName === 'References') {
-        return `Generate a properly formatted APA 7th edition reference list for an academic paper on: "${topic}"
-
-Requirements:
-- Include 10-15 realistic academic references
-- Use proper APA format with hanging indents
-- Include journal articles, books, and conference papers
-- Use years from 2018-2024
-- Each reference should be relevant to the topic
-${researchContext?.selectedReferences ? `\nInclude these actual references:\n${researchContext.selectedReferences.map(r => `${r.authors[0]?.name || 'Author'}, et al. (${r.year}). ${r.title}.`).join('\n')}` : ''}`;
     }
 
     return `You are an expert academic researcher. Write the "${sectionName}" section for a paper on: "${topic}"
 
 Requirements:
-- Write approximately ${sectionWordTarget} words
-- Use formal academic language and scholarly tone
-- Include in-text citations in APA format (Author, Year)
-- Do NOT include the section title, start directly with the content
-- Ensure logical flow and smooth transitions
+- Write approximately ${wordTarget} words
+- Follow the plan below and connect to the previous section without restating it
+${WRITING_GUIDE}
+${integrityRules}
 ${contextInfo}
-${previousContent ? `\nPrevious content for context:\n${previousContent.slice(-800)}` : ''}`;
+${previousContent ? `\nEnd of the previous section, for continuity:\n${previousContent.slice(-800)}` : ''}`;
+}
+
+/**
+ * Remove Markdown the model adds despite instructions; the paper is rendered and exported as plain text
+ */
+export function stripMarkdown(text: string): string {
+    return text
+        .replace(/^#{1,6}\s+/gm, '')
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/__(.+?)__/g, '$1')
+        .replace(/(^|[^*])\*(?!\s)([^*\n]+?)\*/g, '$1$2')
+        .replace(/^[ \t]*[-*+][ \t]+/gm, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
+// Enough output for the section's word target (~1.4 tokens/word) plus headroom, without
+// reserving so much that one request exceeds a free tier's tokens-per-minute budget
+function sectionTokenBudget(words: number): number {
+    return Math.min(4096, Math.max(1024, Math.round(words * 1.4) + 600));
 }
 
 /**
@@ -151,6 +259,10 @@ export async function generatePaper(
         topic,
         wordLimit,
         sections = DEFAULT_SECTIONS,
+        provider,
+        citationStyle = 'apa',
+        polish = true,
+        dashStyle = 'replace',
         researchContext,
         onProgress,
         onSectionStart,
@@ -160,9 +272,38 @@ export async function generatePaper(
     } = options;
 
     const generatedSections: PaperSection[] = [];
+    let referencesSection: PaperSection | null = null;
+    let finalSources: Reference[] = researchContext?.selectedReferences ?? [];
     let previousContent = '';
+    const modelsUsed = new Set<string>();
+    const prose = sections.filter(name => name !== 'References');
+    const reports = includedReports(researchContext);
+    const tablesIn = reports.length > 0 ? tableSection(sections) : undefined;
+    // The abstract has its own length; the body sections share the rest of the word limit
+    const bodyCount = prose.filter(name => name !== 'Abstract').length;
+    const bodyWords = Math.max(200, wordLimit - (prose.includes('Abstract') ? 250 : 0));
 
     try {
+        onProgress?.({
+            currentSection: 'Planning the paper',
+            completedSections: [],
+            totalSections: sections.length,
+            overallProgress: 0,
+            currentContent: '',
+        });
+        const outline = prose.length > 1
+            ? await generateOutline({
+                topic,
+                discipline: researchContext?.discipline,
+                sections: prose,
+                sourceTitles: (researchContext?.selectedReferences ?? []).map(r => `${formatNarrativeCitation(r, citationStyle).replace(/\*/g, '')}: ${r.title}`),
+                researchGaps: (researchContext?.researchGaps ?? []).map(g => `${g.title}: ${g.description}`),
+                researchQuestions: researchContext?.researchQuestions ?? [],
+                findings: reports.flatMap(r => r.results.map(x => x.finding)),
+                provider,
+            })
+            : null;
+
         for (let i = 0; i < sections.length; i++) {
             const sectionName = sections[i];
             const sectionId = sectionName.toLowerCase().replace(/\s+/g, '_');
@@ -180,29 +321,33 @@ export async function generatePaper(
 
             const section: PaperSection = {
                 id: sectionId,
-                title: sectionName,
+                title: sectionName === 'References' ? CITATION_STYLES[citationStyle].referencesTitle : sectionName,
                 content: '',
                 isGenerating: true,
                 isComplete: false,
                 wordCount: 0,
             };
 
-            const prompt = buildSectionPrompt(
-                sectionName,
-                topic,
-                wordLimit,
-                sections.length,
-                researchContext,
-                previousContent
-            );
+            let content = '';
+            if (sectionName === 'References') {
+                // Filled in after every other section, so numbered styles can follow citation order
+                referencesSection = section;
+            } else {
+                const wordTarget = sectionName === 'Abstract' ? 250 : Math.round(bodyWords / Math.max(1, bodyCount));
+                const prompt = buildSectionPrompt(sectionName, {
+                    topic,
+                    wordTarget,
+                    researchContext,
+                    previousContent,
+                    attachTables: sectionName === tablesIn,
+                    style: citationStyle,
+                    outline,
+                });
 
-            // Use OpenRouter GPT-OSS-120B for paper compilation (better for long-form writing)
-            const result = await streamChatCompletion(
-                [{ role: 'user', content: prompt }],
-                {
-                    model: PAPER_MODELS.OPENROUTER_GPT,
-                    maxTokens: 8192,
-                    temperature: 0.7,
+                const result = await streamLLM(prompt, {
+                    provider,
+                    maxTokens: sectionTokenBudget(wordTarget),
+                    onProvider: () => { section.content = ''; },
                     onToken: (token) => {
                         section.content += token;
                         onProgress?.({
@@ -213,16 +358,39 @@ export async function generatePaper(
                             currentContent: section.content,
                         });
                     },
-                }
-            );
+                });
+                modelsUsed.add(`${result.provider}/${result.model}`);
+                content = stripMarkdown(result.content);
 
-            section.content = result.content;
+                if (polish) {
+                    onProgress?.({
+                        currentSection: `${sectionName} (editing)`,
+                        completedSections: generatedSections.map(s => s.title),
+                        totalSections: sections.length,
+                        overallProgress: ((i + 0.8) / sections.length) * 100,
+                        currentContent: content,
+                    });
+                    content = (await polishSection(content, { provider, maxTokens: sectionTokenBudget(wordTarget) })).content;
+                    // Deterministic pass catches what the model edit missed; quotes, citations and numbers are locked
+                    content = content.split(/\n\s*\n/).map(p => cleanupText(p, { dashes: dashStyle }).text).join('\n\n');
+                }
+                previousContent = content;
+            }
+
+            if (section === referencesSection) {
+                generatedSections.push(section);
+                continue;
+            }
+
+            section.content = content;
+            if (sectionName === tablesIn) {
+                section.tables = reports.flatMap(reportTables);
+            }
             section.isGenerating = false;
             section.isComplete = true;
-            section.wordCount = countWords(result.content);
+            section.wordCount = countWords(content);
 
             generatedSections.push(section);
-            previousContent = result.content;
 
             onSectionComplete?.(section);
 
@@ -236,12 +404,42 @@ export async function generatePaper(
             });
         }
 
+        if (referencesSection) {
+            const section = referencesSection as PaperSection;
+            let refs = researchContext?.selectedReferences ?? [];
+            if (isNumberedStyle(citationStyle) && refs.length > 0) {
+                const prose = generatedSections.filter(s => s !== section);
+                const { texts, order } = renumberCitations(prose.map(s => s.content), refs.length);
+                prose.forEach((s, j) => { s.content = texts[j]; });
+                if (order.length > 0) refs = order.map(n => refs[n - 1]);
+            }
+            finalSources = refs;
+            // Built from real metadata; letting the model write it produces fabricated sources.
+            // Italics stay marked with *asterisks*; the preview and exports render them.
+            const literature = refs.length > 0 ? [generateStyledReferenceList(refs, citationStyle)] : [];
+            const datasets = reports.map((r, j) => {
+                const entry = formatDatasetReference(r, citationStyle);
+                // Numbered styles list datasets after the literature
+                return isNumberedStyle(citationStyle) ? `[${refs.length + j + 1}] ${entry}` : entry;
+            });
+            const entries = [...literature, ...datasets];
+            section.content = entries.length > 0 ? entries.join('\n\n') : 'No sources were selected for this paper.';
+            section.isGenerating = false;
+            section.isComplete = true;
+            section.wordCount = countWords(section.content);
+            onSectionComplete?.(section);
+        }
+
         const paper: GeneratedPaper = {
             topic,
             sections: generatedSections,
             totalWordCount: generatedSections.reduce((sum, s) => sum + s.wordCount, 0),
             generatedAt: new Date(),
-            model: 'gemini-2.5-flash',
+            model: [...modelsUsed].join(', ') || 'none',
+            citationStyle,
+            thesis: outline?.thesis,
+            sources: finalSources,
+            datasets: reports.map(r => ({ id: r.dataset.id, title: r.dataset.title, url: r.dataset.url })),
         };
 
         onComplete?.(generatedSections);
@@ -270,5 +468,5 @@ Requirements:
 - Include citations where appropriate
 - Start directly with content, no title`;
 
-    return geminiCompletion(prompt, GEMINI_MODELS.FLASH);
+    return completeLLM(prompt);
 }

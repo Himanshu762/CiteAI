@@ -13,11 +13,11 @@ import { Button, Input } from './components/ui/components';
 export default function App() {
   const [topic, setTopic] = useState('');
   const [wordLimit, setWordLimit] = useState(3000);
-  const [loading, setLoading] = useState(false);
-  const [paperSections, setPaperSections] = useState<PaperSections | null>(null);
-  const [error, setError] = useState<string>('');
+  const [loading] = useState(false);
+  const [paperSections] = useState<PaperSections | null>(null);
+  const [error] = useState<string>('');
 
-  const handleSubmit = async (e: React.FormEvent) => { /* Logic unchanged */ };
+  const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); };
   const generatePdf = async () => { /* Logic unchanged */ };
 
   return (

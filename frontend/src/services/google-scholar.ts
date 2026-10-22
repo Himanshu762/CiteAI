@@ -10,7 +10,7 @@
  */
 
 import { geminiCompletion, GEMINI_MODELS } from './gemini-api';
-import { Reference, Author } from './references-api';
+import { Reference } from './references-api';
 
 // CORS proxy configuration with fallback chain
 const CORS_PROXIES = [

@@ -9,6 +9,7 @@ import {
   signInWithPopup,
   updatePassword,
   sendPasswordResetEmail,
+  Auth,
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
@@ -26,6 +27,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function requireAuth(): Auth {
+  if (!auth) {
+    throw new Error('Sign-in is not configured. Set the VITE_FIREBASE_* variables in frontend/.env.');
+  }
+  return auth;
+}
+
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -35,6 +43,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+      setIsLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setIsLoading(false);
@@ -44,20 +56,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    await signInWithEmailAndPassword(requireAuth(), email, password);
   };
 
   const signUp = async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password);
+    await createUserWithEmailAndPassword(requireAuth(), email, password);
   };
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    await signInWithPopup(requireAuth(), provider);
   };
 
   const signOut = async () => {
-    await firebaseSignOut(auth);
+    if (auth) await firebaseSignOut(auth);
   };
 
   const updateUserPassword = async (newPassword: string) => {
@@ -66,7 +78,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const resetPassword = async (email: string) => {
-    await sendPasswordResetEmail(auth, email);
+    await sendPasswordResetEmail(requireAuth(), email);
   };
 
   const value: AuthContextType = {

@@ -3,7 +3,6 @@ import { Wand2, Sliders, LayoutList, Loader2, AlertCircle, FileText } from 'luci
 import { toast } from 'react-hot-toast';
 import { UserMenu } from './auth/UserMenu';
 import { Button, Badge, Logo } from './ui/components';
-import { Link } from 'react-router-dom';
 
 interface GeneratedPaper {
   sections: Record<string, string>;

@@ -32,8 +32,8 @@ export default function UserSettings() {
       setSuccess('Password updated successfully');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (err: any) {
-      setError(err.message || 'Failed to update password. You may need to sign in again.');
+    } catch (err) {
+      setError((err instanceof Error && err.message) || 'Failed to update password. You may need to sign in again.');
     } finally {
       setIsLoading(false);
     }

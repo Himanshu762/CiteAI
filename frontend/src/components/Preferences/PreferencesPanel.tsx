@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const MODELS = [
   { id: 'openai/gpt-oss-120b:free', label: 'openai/gpt-oss-120b (free)' },
@@ -18,7 +18,7 @@ export default function PreferencesPanel() {
   });
 
   useEffect(() => {
-    try { localStorage.setItem('site-theme-pref', themePref); } catch {}
+    try { localStorage.setItem('site-theme-pref', themePref); } catch { /* storage unavailable */ }
     // apply theme
     const root = document.documentElement;
     if (themePref === 'system') {
@@ -32,7 +32,7 @@ export default function PreferencesPanel() {
   }, [themePref]);
 
   useEffect(() => {
-    try { localStorage.setItem('site-model', model); } catch {}
+    try { localStorage.setItem('site-model', model); } catch { /* storage unavailable */ }
   }, [model]);
 
   return (

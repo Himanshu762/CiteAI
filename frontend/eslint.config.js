@@ -23,6 +23,10 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // Raw JSON from Crossref/OpenAlex/Hugging Face/Kaggle is still untyped; surface it without failing lint.
+      '@typescript-eslint/no-explicit-any': 'warn',
+      // Leading underscore marks an intentionally unused parameter
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
 )

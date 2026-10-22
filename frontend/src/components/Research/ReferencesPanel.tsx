@@ -192,7 +192,7 @@ export function ReferencesPanel() {
                                 <p className="text-xs text-slate-500 mt-1">
                                     {ref.authors.map(a => a.name).slice(0, 3).join(', ')}
                                     {ref.authors.length > 3 && ` et al.`}
-                                    {ref.year && ` (${ref.year})`}
+                                    {ref.year > 0 && ` (${ref.year})`}
                                 </p>
 
                                 {ref.venue && (

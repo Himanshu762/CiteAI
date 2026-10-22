@@ -1,4 +1,3 @@
-import React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 // We'll handle the missing Collaboration import
@@ -12,7 +11,7 @@ interface SmartEditorProps {
   initialContent?: string;
 }
 
-export const SmartEditor = ({ paperId, initialContent = '<p>Start writing...</p>' }: SmartEditorProps) => {
+export const SmartEditor = ({ initialContent = '<p>Start writing...</p>' }: SmartEditorProps) => {
   const editor = useEditor({
     extensions: [
       StarterKit,

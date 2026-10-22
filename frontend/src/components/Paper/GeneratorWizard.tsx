@@ -9,7 +9,6 @@ type WizardStepProps = {
 }
 
 const ParameterGrid = ({ onBack }: WizardStepProps) => {
-  const [setting, setSetting] = useState("")
   
   return (
     <div className="space-y-6">

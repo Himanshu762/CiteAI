@@ -4,7 +4,7 @@
  * Uses HuggingFace Dataset Viewer API for real data access
  */
 
-import { geminiCompletion, GEMINI_MODELS } from './gemini-api';
+import { completeLLM } from './llm';
 
 export interface RealDataAnalysis {
     summary: {
@@ -109,13 +109,12 @@ export async function fetchDatasetSample(
  * Perform statistical analysis on real data
  */
 export async function analyzeRealData(
-    datasetId: string,
-    source: 'huggingface' | 'kaggle' = 'huggingface'
+    datasetId: string
 ): Promise<RealDataAnalysis> {
     const sampleSize = 100;
 
     // Fetch real data sample
-    const { rows, features, numRows } = await fetchDatasetSample(datasetId, undefined, 'train', sampleSize);
+    const { rows, numRows } = await fetchDatasetSample(datasetId, undefined, 'train', sampleSize);
 
     if (rows.length === 0) {
         throw new Error('No data available for analysis');
@@ -388,8 +387,8 @@ Findings: ${analysis.findings.slice(0, 3).map(f => f.title).join(', ')}
 Respond with just the interpretation, no preamble.`;
 
     try {
-        return await geminiCompletion(prompt, GEMINI_MODELS.FLASH);
-    } catch (e) {
+        return await completeLLM(prompt);
+    } catch {
         return `This dataset contains ${analysis.summary.totalRows.toLocaleString()} samples with ${analysis.summary.numericColumns} numeric and ${analysis.summary.categoricalColumns} categorical features, providing quantitative support for the research.`;
     }
 }

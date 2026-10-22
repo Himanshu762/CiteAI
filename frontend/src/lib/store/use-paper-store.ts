@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { Paper, PaperSection, GenerationProgress, QualityReport, Reference, ExportConfig } from '../../types/paper';
+import { persist } from 'zustand/middleware';
+import { Paper, GenerationProgress, QualityReport, Reference, ExportConfig } from '../../types/paper';
 
 interface PaperState {
   // Current paper being generated/edited
@@ -52,6 +53,9 @@ interface PaperState {
 
 const defaultExportConfig: ExportConfig = {
   format: 'pdf',
+  citationStyle: 'apa',
+  dashStyle: 'replace',
+  titlePage: { author: '', institution: '', course: '', instructor: '', dueDate: '' },
   includeCoverPage: true,
   includeTableOfContents: true,
   includeReferences: true,
@@ -59,7 +63,7 @@ const defaultExportConfig: ExportConfig = {
   lineSpacing: 1.5,
 };
 
-export const usePaperStore = create<PaperState>((set, get) => ({
+export const usePaperStore = create<PaperState>()(persist((set, get) => ({
   currentPaper: null,
   isGenerating: false,
   generationProgress: null,
@@ -158,4 +162,28 @@ export const usePaperStore = create<PaperState>((set, get) => ({
     isCheckingQuality: false,
     exportConfig: defaultExportConfig,
   }),
+}), {
+  name: 'citeai-papers',
+  // Only finished work survives a reload; in-flight generation state does not
+  partialize: (state) => ({
+    papers: state.papers,
+    currentPaper: state.currentPaper,
+    exportConfig: state.exportConfig,
+  }),
+  merge: (persisted, current) => {
+    const saved = (persisted ?? {}) as Partial<PaperState>;
+    const revive = (paper: Paper): Paper => ({
+      ...paper,
+      createdAt: new Date(paper.createdAt),
+      updatedAt: new Date(paper.updatedAt),
+    });
+    return {
+      ...current,
+      ...saved,
+      // Older saves lack newer export fields
+      exportConfig: { ...defaultExportConfig, ...saved.exportConfig, titlePage: { ...defaultExportConfig.titlePage, ...saved.exportConfig?.titlePage } },
+      papers: (saved.papers ?? []).map(revive),
+      currentPaper: saved.currentPaper ? revive(saved.currentPaper) : null,
+    };
+  },
 }));

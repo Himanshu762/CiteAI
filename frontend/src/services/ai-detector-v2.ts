@@ -392,41 +392,35 @@ function calculateLexicalSophistication(text: string): number {
  */
 function calculatePatternScore(text: string): number {
     const lowerText = text.toLowerCase();
-    let totalMatches = 0;
     let weightedScore = 0;
 
     // High confidence patterns (weight: 3)
     for (const pattern of AI_PATTERNS.highConfidence) {
         const count = countOccurrences(lowerText, pattern.toLowerCase());
-        totalMatches += count;
         weightedScore += count * 3;
     }
 
     // Transition patterns (weight: 2)
     for (const pattern of AI_PATTERNS.transitions) {
         const count = countOccurrences(lowerText, pattern.toLowerCase());
-        totalMatches += count;
         weightedScore += count * 2;
     }
 
     // Filler patterns (weight: 2)
     for (const pattern of AI_PATTERNS.fillers) {
         const count = countOccurrences(lowerText, pattern.toLowerCase());
-        totalMatches += count;
         weightedScore += count * 2;
     }
 
     // Closing patterns (weight: 2)
     for (const pattern of AI_PATTERNS.closings) {
         const count = countOccurrences(lowerText, pattern.toLowerCase());
-        totalMatches += count;
         weightedScore += count * 2;
     }
 
     // Hedging patterns (weight: 1)
     for (const pattern of AI_PATTERNS.hedging) {
         const count = countOccurrences(lowerText, pattern.toLowerCase());
-        totalMatches += count;
         weightedScore += count * 1;
     }
 

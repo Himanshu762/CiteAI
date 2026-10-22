@@ -1,48 +1,29 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Loader2, ArrowRight, ArrowLeft, Database, BarChart3, Plus, Check, X, Sparkles, TrendingUp, AlertTriangle, Lightbulb, ExternalLink } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Search, Loader2, ArrowRight, ArrowLeft, Database, Plus, Check, X, Sparkles, TrendingUp, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWizardStore } from '../../lib/store/use-wizard-store';
 import { useResearchStore } from '../../lib/store/use-research-store';
 import { searchDatasets, Dataset } from '../../services/dataset-finder';
-import { analyzeRealData, RealDataAnalysis, interpretFindings } from '../../services/real-data-analysis';
+import { analyzeSpecificDataset } from '../../services/data-analysis/auto-analyze';
+import { AutoAnalysisPanel } from '../../components/analysis/AutoAnalysisPanel';
+import { AnalysisReportCard } from '../../components/analysis/AnalysisReportCard';
 import { discoverDatasetsForTopic } from '../../services/dataset-viz';
 import toast from 'react-hot-toast';
-
-// Simple bar chart for statistics
-const StatBar = ({ label, value, max, color = '#3b82f6' }: { label: string; value: number; max: number; color?: string }) => {
-    const width = max > 0 ? (value / max) * 100 : 0;
-    return (
-        <div className="flex items-center gap-2 text-sm">
-            <span className="text-zinc-400 w-24 truncate">{label}</span>
-            <div className="flex-1 h-4 bg-zinc-800 rounded overflow-hidden">
-                <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(width, 100)}%` }}
-                    transition={{ duration: 0.5 }}
-                    className="h-full rounded"
-                    style={{ backgroundColor: color }}
-                />
-            </div>
-            <span className="text-zinc-500 w-16 text-right text-xs">{typeof value === 'number' ? value.toLocaleString() : value}</span>
-        </div>
-    );
-};
+import { disciplineName } from '../../services/disciplines';
 
 export default function AnalyzePage() {
     const navigate = useNavigate();
-    const { topic, setStage } = useWizardStore();
-    const { paperContext, addDatasetToContext, removeDatasetFromContext, addDatasetAnalysis } = useResearchStore();
+    const { topic, setStage, researchQuestions, fieldId } = useWizardStore();
+    const { paperContext, addDatasetToContext, removeDatasetFromContext, addAnalysisReport, removeAnalysisReport, toggleReportInPaper } = useResearchStore();
+    const selectedQuestions = researchQuestions.filter(q => q.selected).map(q => q.question);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<Dataset[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [analyzingId, setAnalyzingId] = useState<string | null>(null);
-    const [analyses, setAnalyses] = useState<Map<string, RealDataAnalysis>>(new Map());
-    const [interpretations, setInterpretations] = useState<Map<string, string>>(new Map());
     const [suggestedQueries, setSuggestedQueries] = useState<string[]>([]);
     const [isDiscovering, setIsDiscovering] = useState(false);
-    const [expandedDataset, setExpandedDataset] = useState<string | null>(null);
 
     // Redirect if no topic
     useEffect(() => {
@@ -87,7 +68,7 @@ export default function AnalyzePage() {
             if (results.length === 0) {
                 toast('No datasets found. Try different keywords.');
             }
-        } catch (error) {
+        } catch {
             toast.error('Search failed');
         } finally {
             setIsSearching(false);
@@ -96,47 +77,23 @@ export default function AnalyzePage() {
 
     const handleAnalyze = async (dataset: Dataset) => {
         if (dataset.source !== 'huggingface') {
-            toast.error('Real analysis only available for HuggingFace datasets');
+            toast.error('Analysis is only available for Hugging Face datasets');
             return;
         }
 
         setAnalyzingId(dataset.id);
-        setExpandedDataset(dataset.id);
-
         try {
-            toast('Fetching real data sample...');
-            const analysis = await analyzeRealData(dataset.id);
-            setAnalyses(prev => new Map(prev).set(dataset.id, analysis));
-
-            // Store summary in research context
-            addDatasetAnalysis(dataset.id, {
-                summary: {
-                    totalRows: analysis.summary.totalRows,
-                    totalColumns: analysis.summary.totalColumns,
-                    missingValues: analysis.summary.missingValues,
-                    duplicateRows: 0,
-                },
-                columns: analysis.columns.map(c => ({
-                    name: c.name,
-                    type: c.type === 'unknown' ? 'text' : c.type, // Map unknown to text
-                    unique: c.unique,
-                    missing: c.missing,
-                    min: c.min,
-                    max: c.max,
-                    mean: c.mean,
-                    topValues: c.topValues?.map(v => ({ value: v.value, count: v.count })),
-                })),
-                source: 'real',
-            });
-
-            // Get AI interpretation
-            const interpretation = await interpretFindings(analysis, topic);
-            setInterpretations(prev => new Map(prev).set(dataset.id, interpretation));
-
-            toast.success('Analysis complete with real statistics!');
+            const report = await analyzeSpecificDataset(topic, dataset, { researchQuestions: selectedQuestions });
+            if (!report || report.results.length === 0) {
+                toast.error('This dataset has no columns suitable for statistical tests');
+                return;
+            }
+            addAnalysisReport(report);
+            if (!isSelected(dataset)) addDatasetToContext(dataset);
+            toast.success('Analysis complete');
         } catch (error) {
             console.error('Analysis failed:', error);
-            toast.error('Could not analyze dataset - data may not be publicly accessible');
+            toast.error(error instanceof Error ? error.message : 'Could not analyze dataset');
         } finally {
             setAnalyzingId(null);
         }
@@ -209,6 +166,23 @@ export default function AnalyzePage() {
                         Find real datasets and get numerical statistics for your research
                     </p>
                 </motion.div>
+
+                <AutoAnalysisPanel topic={topic} researchQuestions={selectedQuestions} discipline={disciplineName(fieldId)} />
+
+                {paperContext.analysisReports.length > 0 && (
+                    <div className="mb-8 space-y-4">
+                        {paperContext.analysisReports.map(report => (
+                            <AnalysisReportCard
+                                key={report.id}
+                                report={report}
+                                onToggleInclude={() => toggleReportInPaper(report.id)}
+                                onRemove={() => removeAnalysisReport(report.id)}
+                            />
+                        ))}
+                    </div>
+                )}
+
+                <h2 className="mb-3 text-sm font-medium text-zinc-400">Or search and pick a dataset yourself</h2>
 
                 {/* Suggested queries */}
                 {suggestedQueries.length > 0 && (
@@ -368,150 +342,6 @@ export default function AnalyzePage() {
                                     </div>
                                 </div>
 
-                                {/* Analysis results */}
-                                <AnimatePresence>
-                                    {analyses.has(dataset.id) && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            className="border-t border-zinc-800"
-                                        >
-                                            <div className="p-5 bg-zinc-800/30">
-                                                {/* Summary stats */}
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                                                    <div className="p-3 bg-zinc-900/50 rounded-lg text-center">
-                                                        <div className="text-2xl font-bold text-white">
-                                                            {analyses.get(dataset.id)!.summary.totalRows.toLocaleString()}
-                                                        </div>
-                                                        <div className="text-xs text-zinc-500">Total Rows</div>
-                                                    </div>
-                                                    <div className="p-3 bg-zinc-900/50 rounded-lg text-center">
-                                                        <div className="text-2xl font-bold text-white">
-                                                            {analyses.get(dataset.id)!.summary.totalColumns}
-                                                        </div>
-                                                        <div className="text-xs text-zinc-500">Columns</div>
-                                                    </div>
-                                                    <div className="p-3 bg-zinc-900/50 rounded-lg text-center">
-                                                        <div className="text-2xl font-bold text-white">
-                                                            {analyses.get(dataset.id)!.summary.numericColumns}
-                                                        </div>
-                                                        <div className="text-xs text-zinc-500">Numeric</div>
-                                                    </div>
-                                                    <div className="p-3 bg-zinc-900/50 rounded-lg text-center">
-                                                        <div className="text-2xl font-bold text-white">
-                                                            {analyses.get(dataset.id)!.summary.missingPercentage.toFixed(1)}%
-                                                        </div>
-                                                        <div className="text-xs text-zinc-500">Missing</div>
-                                                    </div>
-                                                </div>
-
-                                                {/* AI Interpretation */}
-                                                {interpretations.has(dataset.id) && (
-                                                    <div className="mb-6 p-4 bg-purple-500/10 rounded-xl border border-purple-500/20">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <Sparkles className="w-4 h-4 text-purple-400" />
-                                                            <span className="text-sm font-medium text-purple-300">AI Interpretation</span>
-                                                        </div>
-                                                        <p className="text-sm text-zinc-300 leading-relaxed">
-                                                            {interpretations.get(dataset.id)}
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                {/* Statistical Findings */}
-                                                <div className="mb-6">
-                                                    <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
-                                                        <BarChart3 className="w-4 h-4 text-blue-400" />
-                                                        Statistical Findings
-                                                    </h4>
-                                                    <div className="grid gap-3">
-                                                        {analyses.get(dataset.id)!.findings.map((finding, j) => (
-                                                            <div
-                                                                key={j}
-                                                                className={`p-3 rounded-lg flex items-start gap-3 ${finding.type === 'warning'
-                                                                    ? 'bg-amber-500/10 border border-amber-500/20'
-                                                                    : finding.type === 'recommendation'
-                                                                        ? 'bg-blue-500/10 border border-blue-500/20'
-                                                                        : 'bg-zinc-800/50 border border-zinc-700/50'
-                                                                    }`}
-                                                            >
-                                                                {finding.type === 'warning' ? (
-                                                                    <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                                                                ) : (
-                                                                    <Lightbulb className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
-                                                                )}
-                                                                <div>
-                                                                    <div className="text-sm font-medium text-white">{finding.title}</div>
-                                                                    <div className="text-xs text-zinc-400 mt-0.5">{finding.description}</div>
-                                                                </div>
-                                                                {finding.value !== undefined && (
-                                                                    <div className="ml-auto text-sm font-mono text-zinc-300">
-                                                                        {typeof finding.value === 'number'
-                                                                            ? finding.value.toLocaleString()
-                                                                            : finding.value}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* Correlations */}
-                                                {analyses.get(dataset.id)!.correlations.length > 0 && (
-                                                    <div className="mb-6">
-                                                        <h4 className="text-sm font-medium text-white mb-3">Correlations</h4>
-                                                        <div className="space-y-2">
-                                                            {analyses.get(dataset.id)!.correlations.slice(0, 5).map((corr, j) => (
-                                                                <div key={j} className="flex items-center gap-2 text-sm">
-                                                                    <span className="text-zinc-400">{corr.column1}</span>
-                                                                    <span className="text-zinc-600">↔</span>
-                                                                    <span className="text-zinc-400">{corr.column2}</span>
-                                                                    <div className={`ml-auto px-2 py-0.5 rounded text-xs ${corr.strength === 'strong' ? 'bg-green-500/20 text-green-300' :
-                                                                        corr.strength === 'moderate' ? 'bg-blue-500/20 text-blue-300' :
-                                                                            corr.strength === 'weak' ? 'bg-yellow-500/20 text-yellow-300' :
-                                                                                'bg-zinc-700 text-zinc-400'
-                                                                        }`}>
-                                                                        r = {corr.correlation}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Column Statistics */}
-                                                <div>
-                                                    <h4 className="text-sm font-medium text-white mb-3">Column Statistics</h4>
-                                                    <div className="grid gap-3 md:grid-cols-2">
-                                                        {analyses.get(dataset.id)!.columns.slice(0, 6).map((col, j) => (
-                                                            <div key={j} className="p-3 bg-zinc-900/50 rounded-lg">
-                                                                <div className="flex items-center justify-between mb-2">
-                                                                    <span className="text-sm font-medium text-white truncate">{col.name}</span>
-                                                                    <span className={`text-xs px-2 py-0.5 rounded ${col.type === 'numeric' ? 'bg-blue-500/20 text-blue-300' :
-                                                                        col.type === 'categorical' ? 'bg-purple-500/20 text-purple-300' :
-                                                                            'bg-zinc-700 text-zinc-400'
-                                                                        }`}>
-                                                                        {col.type}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="text-xs text-zinc-500 space-y-1">
-                                                                    <div>Unique: {col.unique.toLocaleString()} | Missing: {col.missingPercent.toFixed(1)}%</div>
-                                                                    {col.type === 'numeric' && col.mean !== undefined && (
-                                                                        <div>Mean: {col.mean} | Range: {col.min} - {col.max}</div>
-                                                                    )}
-                                                                    {col.topValues && col.topValues.length > 0 && (
-                                                                        <div>Top: {col.topValues[0].value} ({col.topValues[0].percentage.toFixed(0)}%)</div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
                             </motion.div>
                         ))}
                     </div>

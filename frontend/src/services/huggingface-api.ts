@@ -72,7 +72,7 @@ function getHFHeaders(): HeadersInit {
 export async function searchHFDatasets(
     params: HFSearchParams
 ): Promise<HFDataset[]> {
-    const { query, limit = 20, author, tags } = params;
+    const { query, limit = 20, author } = params;
 
     const searchParams = new URLSearchParams({
         search: query,

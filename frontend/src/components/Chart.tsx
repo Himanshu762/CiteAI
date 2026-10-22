@@ -1,4 +1,3 @@
-import React from 'react';
 import { Bar } from "@visx/shape"
 import { scaleLinear, scaleBand } from "@visx/scale"
 
@@ -9,7 +8,6 @@ interface ChartData {
 }
 
 const CustomBarChart = ({ data }: { data: ChartData[] }) => {
-  const margin = { top: 20, right: 20, bottom: 20, left: 20 }
   const width = 500
   const height = 300
 

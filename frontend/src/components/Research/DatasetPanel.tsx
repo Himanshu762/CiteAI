@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Database, Download, BarChart2, Loader2, ExternalLink, FileSpreadsheet, FileText, Check } from 'lucide-react';
+import { Search, Database, Download, BarChart2, Loader2, ExternalLink, FileSpreadsheet, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Button } from '../ui/components';
 import { searchDatasets, analyzeDataset, Dataset, DatasetAnalysis } from '../../services/dataset-finder';
@@ -48,7 +48,7 @@ export function DatasetPanel() {
             if (datasets.length === 0) {
                 toast('No datasets found', { icon: '📊' });
             }
-        } catch (err) {
+        } catch {
             toast.error('Search failed');
         } finally {
             setIsSearching(false);
@@ -66,7 +66,7 @@ export function DatasetPanel() {
             // Store analysis in paper context
             addDatasetAnalysis(dataset.id, result);
             toast.success('Analysis complete');
-        } catch (err) {
+        } catch {
             toast.error('Analysis failed');
         } finally {
             setIsAnalyzing(false);

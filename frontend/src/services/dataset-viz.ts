@@ -1,10 +1,10 @@
 /**
  * Dataset Visualization Service
  * Generates chart data and visualizations for datasets
- * Uses Gemini for AI-powered insights
+ * Uses the AI gateway for insights
  */
 
-import { geminiCompletion, GEMINI_MODELS } from './gemini-api';
+import { completeLLM } from './llm';
 import { Dataset, DatasetAnalysis } from './dataset-finder';
 
 export interface ChartData {
@@ -135,13 +135,13 @@ Missing Values: ${analysis.summary.missingValues}
 Respond with a JSON array of insight strings:
 ["insight 1", "insight 2", "insight 3"]`;
 
-        const result = await geminiCompletion(insightPrompt, GEMINI_MODELS.FLASH);
+        const result = await completeLLM(insightPrompt);
         const jsonMatch = result.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
             insights.push(...parsed);
         }
-    } catch (e) {
+    } catch {
         insights.push('Dataset contains structured data suitable for analysis');
         insights.push(`${analysis.summary.totalRows} data points available for research`);
     }
@@ -178,7 +178,7 @@ Example:
 Respond with ONLY a JSON array of 4 specific, searchable queries (2-4 words each):
 ["query1", "query2", "query3", "query4"]`;
 
-        const result = await geminiCompletion(prompt, GEMINI_MODELS.FLASH);
+        const result = await completeLLM(prompt);
         const jsonMatch = result.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
             const queries = JSON.parse(jsonMatch[0]);

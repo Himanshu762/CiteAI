@@ -1,4 +1,3 @@
-import React from 'react';
 import CornerFiligree from '../assets/corner-filigree.svg';
 import Flourish from '../assets/flourish-ornament.svg';
 import Crest from '../assets/crest.svg';

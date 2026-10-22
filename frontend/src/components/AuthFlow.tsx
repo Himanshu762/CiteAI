@@ -35,13 +35,14 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
         await signIn(email, password);
       }
       navigate('/dashboard');
-    } catch (err: any) {
-      const errorMessage = err.code === 'auth/user-not-found' ? 'No account found with this email'
-        : err.code === 'auth/wrong-password' ? 'Incorrect password'
-          : err.code === 'auth/email-already-in-use' ? 'An account with this email already exists'
-            : err.code === 'auth/invalid-email' ? 'Invalid email address'
-              : err.code === 'auth/weak-password' ? 'Password is too weak'
-                : err.message || 'An error occurred';
+    } catch (err) {
+      const { code, message } = err as { code?: string; message?: string };
+      const errorMessage = code === 'auth/user-not-found' ? 'No account found with this email'
+        : code === 'auth/wrong-password' || code === 'auth/invalid-credential' ? 'Incorrect email or password'
+          : code === 'auth/email-already-in-use' ? 'An account with this email already exists'
+            : code === 'auth/invalid-email' ? 'Invalid email address'
+              : code === 'auth/weak-password' ? 'Password is too weak'
+                : message || 'An error occurred';
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -54,8 +55,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
     try {
       await signInWithGoogle();
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google');
+    } catch (err) {
+      setError((err instanceof Error && err.message) || 'Failed to sign in with Google');
     } finally {
       setIsLoading(false);
     }

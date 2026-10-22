@@ -1,20 +1,21 @@
+import { lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './providers/auth-provider'
 
 // Wizard pages (new clean UI)
 import StartPage from './pages/wizard/StartPage'
-import ResearchPage from './pages/wizard/ResearchPage'
-import AnalyzePage from './pages/wizard/AnalyzePage'
-import ComposePage from './pages/wizard/ComposePage'
-import FinishPage from './pages/wizard/FinishPage'
+// Later steps load on demand so the landing page stays small
+const ResearchPage = lazy(() => import('./pages/wizard/ResearchPage'))
+const AnalyzePage = lazy(() => import('./pages/wizard/AnalyzePage'))
+const ComposePage = lazy(() => import('./pages/wizard/ComposePage'))
+const FinishPage = lazy(() => import('./pages/wizard/FinishPage'))
 
 // Legacy pages (kept for compatibility)
-import GeneratePage from './pages/GeneratePage'
-import DashboardPage from './pages/Dashboard'
-import Features from './pages/Features'
-import UserSettings from './pages/UserSettings'
+const DashboardPage = lazy(() => import('./pages/Dashboard'))
+const Features = lazy(() => import('./pages/Features'))
+const UserSettings = lazy(() => import('./pages/UserSettings'))
 
 import './index.css'
 import { Buffer } from 'buffer'
@@ -50,6 +51,7 @@ window.Buffer = Buffer;
 createRoot(document.getElementById('root')!).render(
   <AuthProvider>
     <BrowserRouter>
+      <Suspense fallback={<div className="min-h-screen bg-[#0a0a0f]" />}>
       <Routes>
         {/* Clean wizard flow */}
         <Route path="/" element={<StartPage />} />
@@ -60,7 +62,7 @@ createRoot(document.getElementById('root')!).render(
 
         {/* Legacy routes */}
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/generate" element={<GeneratePage />} />
+        <Route path="/generate" element={<Navigate to="/" replace />} />
         <Route path="/library" element={<DashboardPage />} />
         <Route path="/settings" element={<UserSettings />} />
         <Route path="/features" element={<Features />} />
@@ -69,6 +71,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/sign-in/*" element={<AuthFlow mode="sign-in" />} />
         <Route path="/sign-up/*" element={<AuthFlow mode="sign-up" />} />
       </Routes>
+      </Suspense>
       <Toaster position="bottom-right" />
     </BrowserRouter>
   </AuthProvider>

@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Loader2, ArrowLeft, ArrowRight, Check, Cpu, FileText, Zap, Brain } from 'lucide-react';
+import { Sparkles, ArrowLeft, Check, Cpu, FileText, Zap, Brain } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWizardStore } from '../../lib/store/use-wizard-store';
 import { useResearchStore } from '../../lib/store/use-research-store';
 import { usePaperStore } from '../../lib/store/use-paper-store';
 import { generatePaper, PaperSection } from '../../services/paper-generator';
-import { GEMINI_MODELS } from '../../services/gemini-api';
+import { getLLMProviders } from '../../services/llm';
+import { disciplineName } from '../../services/disciplines';
+import { CitationStyle, CITATION_STYLES } from '../../services/citation-formatter';
 import toast from 'react-hot-toast';
 
 const SECTION_OPTIONS = [
@@ -17,22 +19,37 @@ const SECTION_OPTIONS = [
     { id: 'results', label: 'Results', duration: '~45s' },
     { id: 'discussion', label: 'Discussion', duration: '~45s' },
     { id: 'conclusion', label: 'Conclusion', duration: '~30s' },
+    { id: 'references', label: 'References', duration: 'instant' },
 ];
 
-const MODELS = [
-    { id: GEMINI_MODELS.FLASH, name: 'Gemini 2.5 Flash', speed: 'Fast • Free', icon: Zap, description: 'Quick generation, good quality' },
-    { id: GEMINI_MODELS.PRO, name: 'Gemini 2.5 Pro', speed: 'Smart • Free', icon: Brain, description: 'Best quality, detailed writing' },
-    { id: GEMINI_MODELS.FLASH_LITE, name: 'Gemini Flash Lite', speed: 'Fastest • Free', icon: Cpu, description: 'Ultra-fast, basic quality' },
-];
+const PROVIDER_DESCRIPTIONS: Record<string, string> = {
+    groq: 'Very fast, generous free tier',
+    nvidia: 'NVIDIA NIM, high free request limit',
+    mistral: 'Strong long-form writing',
+    openrouter: 'Free community models',
+    gemini: 'Google, low free quota',
+};
+
+const AUTO_MODEL: ModelOption = { id: '', name: 'Auto', speed: 'Recommended', icon: Sparkles, description: 'Best available free provider, switches when one hits its limit' };
+
+interface ModelOption {
+    id: string;
+    name: string;
+    speed: string;
+    icon: typeof Zap;
+    description: string;
+}
 
 
 export default function ComposePage() {
     const navigate = useNavigate();
-    const { topic, setStage } = useWizardStore();
+    const { topic, setStage, researchGaps, researchQuestions, fieldId } = useWizardStore();
     const { paperContext } = useResearchStore();
-    const { addPaper, setCurrentPaper } = usePaperStore();
+    const { addPaper, setCurrentPaper, exportConfig, setExportConfig } = usePaperStore();
+    const citationStyle = exportConfig.citationStyle;
 
-    const [selectedModel, setSelectedModel] = useState(MODELS[0].id);
+    const [models, setModels] = useState<ModelOption[]>([AUTO_MODEL]);
+    const [selectedModel, setSelectedModel] = useState(AUTO_MODEL.id);
     const [selectedSections, setSelectedSections] = useState<string[]>(SECTION_OPTIONS.map(s => s.id));
     const [wordLimit, setWordLimit] = useState(3000);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -46,6 +63,25 @@ export default function ComposePage() {
             navigate('/');
         }
     }, [topic, navigate]);
+
+    // Offer the providers the server has keys for, in fallback order
+    useEffect(() => {
+        getLLMProviders().then(providers => {
+            setModels([
+                AUTO_MODEL,
+                ...providers.map(p => ({
+                    id: p.id,
+                    name: p.label,
+                    speed: p.model,
+                    icon: p.id === 'mistral' ? Brain : p.id === 'groq' ? Zap : Cpu,
+                    description: PROVIDER_DESCRIPTIONS[p.id] ?? 'Free tier',
+                })),
+            ]);
+            if (providers.length === 0) {
+                toast.error('No AI provider configured on the server. See .env.example.');
+            }
+        });
+    }, []);
 
     const toggleSection = (id: string) => {
         setSelectedSections(prev =>
@@ -72,8 +108,15 @@ export default function ComposePage() {
                 sections: selectedSections.map(id =>
                     SECTION_OPTIONS.find(s => s.id === id)?.label || id
                 ),
-                model: selectedModel,
-                researchContext: paperContext,
+                provider: selectedModel || undefined,
+                citationStyle,
+                dashStyle: exportConfig.dashStyle,
+                researchContext: {
+                    ...paperContext,
+                    researchGaps: researchGaps.filter(g => g.selected),
+                    researchQuestions: researchQuestions.filter(q => q.selected).map(q => q.question),
+                    discipline: disciplineName(fieldId),
+                },
                 onProgress: (p) => {
                     setProgress(p.overallProgress);
                     setCurrentSection(p.currentSection);
@@ -92,8 +135,12 @@ export default function ComposePage() {
                 totalWordCount,
                 createdAt: new Date(),
                 updatedAt: new Date(),
-                model: selectedModel,
+                model: paper.model,
                 status: 'complete' as const,
+                citationStyle: paper.citationStyle,
+                thesis: paper.thesis,
+                sources: paper.sources,
+                datasets: paper.datasets,
             };
             addPaper(newPaper);
             setCurrentPaper(newPaper);
@@ -102,8 +149,8 @@ export default function ComposePage() {
             setStage('finish');
             navigate('/finish');
         } catch (error) {
-            toast.error('Generation failed - check console');
             console.error(error);
+            toast.error(error instanceof Error ? error.message : 'Generation failed');
         } finally {
             setIsGenerating(false);
         }
@@ -228,9 +275,9 @@ export default function ComposePage() {
 
                             {/* Model selection */}
                             <div className="mb-8">
-                                <label className="block text-sm font-medium text-zinc-300 mb-3">AI Model (Free Gemini)</label>
+                                <label className="block text-sm font-medium text-zinc-300 mb-3">AI Model (free tiers)</label>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    {MODELS.map(model => (
+                                    {models.map(model => (
                                         <button
                                             key={model.id}
                                             onClick={() => setSelectedModel(model.id)}
@@ -256,6 +303,38 @@ export default function ComposePage() {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Citation style: fixed at generation time because the model writes the in-text citations */}
+                            <div className="mb-8">
+                                <label className="block text-sm font-medium text-zinc-300 mb-3">Citation style</label>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    {(Object.keys(CITATION_STYLES) as CitationStyle[]).map(style => (
+                                        <button
+                                            key={style}
+                                            onClick={() => setExportConfig({ citationStyle: style })}
+                                            className={`p-3 rounded-xl border text-sm text-left transition-all ${citationStyle === style
+                                                ? 'bg-blue-500/20 border-blue-500/50 text-white'
+                                                : 'bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                                                }`}
+                                        >
+                                            <div className="font-medium">{CITATION_STYLES[style].label}</div>
+                                            <div className="text-xs text-zinc-500">
+                                                {style === 'ieee' ? 'Numbered [1]' : style === 'mla' ? 'Author only' : 'Author, year'}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <label className="mb-8 flex items-center gap-2 text-sm text-zinc-300">
+                                <input
+                                    type="checkbox"
+                                    checked={exportConfig.dashStyle === 'replace'}
+                                    onChange={e => setExportConfig({ dashStyle: e.target.checked ? 'replace' : 'keep' })}
+                                    className="accent-blue-500"
+                                />
+                                Replace em-dashes with commas or parentheses
+                            </label>
 
                             {/* Sections */}
                             <div className="mb-8">

@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { BookOpen, BarChart3, FileText, CheckCircle, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WizardStage, useWizardStore } from '../../lib/store/use-wizard-store';

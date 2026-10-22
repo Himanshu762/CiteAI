@@ -122,11 +122,11 @@ export async function generatePaper(params: GeneratePaperParams): Promise<Genera
       plagiarism_score: plagiarismScore,
     };
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error generating paper:', error);
     return {
       status: 'error',
-      message: error.message || 'An unexpected error occurred',
+      message: (error instanceof Error && error.message) || 'An unexpected error occurred',
       sections: {}, word_count: 0, readability_score: 0, plagiarism_score: 0
     };
   }

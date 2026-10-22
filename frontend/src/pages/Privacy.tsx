@@ -1,4 +1,3 @@
-import React from 'react';
 import { LandingHeader } from '../components/navigation/Navigation';
 
 export default function Privacy() {

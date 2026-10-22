@@ -6,7 +6,7 @@ import {
     ChevronDown, ChevronUp
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { Button, Badge, Alert, ProgressBar } from '../ui/components';
+import { Button, Badge, ProgressBar } from '../ui/components';
 import { PaperSection } from '../../services/paper-generator';
 import { analyzeQuality, fixPlagiarism, QualityAnalysis } from '../../services/plagiarism-checker';
 import { detectAIContent, AIDetectionResult } from '../../services/ai-detector-v2';
@@ -148,7 +148,7 @@ export function QualityPanel({ sections, onContentUpdate }: QualityPanelProps) {
         }
     }, [hasContent]);
 
-    const getScoreColor = (score: number, type: 'originality' | 'readability'): 'green' | 'amber' | 'red' => {
+    const getScoreColor = (score: number): 'green' | 'amber' | 'red' => {
         if (score > 80) return 'green';
         if (score > 60) return 'amber';
         return 'red';
@@ -241,14 +241,14 @@ export function QualityPanel({ sections, onContentUpdate }: QualityPanelProps) {
                                 <BookCheck size={16} className="text-slate-500" />
                                 <span className="text-xs font-medium text-slate-500">Originality</span>
                             </div>
-                            <p className={`text-2xl font-bold ${getScoreColor(analysis.originalityScore, 'originality') === 'green' ? 'text-green-600' :
-                                getScoreColor(analysis.originalityScore, 'originality') === 'amber' ? 'text-amber-600' : 'text-red-600'
+                            <p className={`text-2xl font-bold ${getScoreColor(analysis.originalityScore) === 'green' ? 'text-green-600' :
+                                getScoreColor(analysis.originalityScore) === 'amber' ? 'text-amber-600' : 'text-red-600'
                                 }`}>
                                 {analysis.originalityScore}%
                             </p>
                             <ProgressBar
                                 value={analysis.originalityScore}
-                                color={getScoreColor(analysis.originalityScore, 'originality')}
+                                color={getScoreColor(analysis.originalityScore)}
                                 className="mt-2"
                             />
                         </div>
@@ -385,8 +385,8 @@ export function QualityPanel({ sections, onContentUpdate }: QualityPanelProps) {
                                 <Gauge size={16} className="text-slate-500" />
                                 <span className="text-xs font-medium text-slate-500">Readability</span>
                             </div>
-                            <p className={`text-2xl font-bold ${getScoreColor(analysis.readabilityScore, 'readability') === 'green' ? 'text-green-600' :
-                                getScoreColor(analysis.readabilityScore, 'readability') === 'amber' ? 'text-amber-600' : 'text-red-600'
+                            <p className={`text-2xl font-bold ${getScoreColor(analysis.readabilityScore) === 'green' ? 'text-green-600' :
+                                getScoreColor(analysis.readabilityScore) === 'amber' ? 'text-amber-600' : 'text-red-600'
                                 }`}>
                                 {analysis.readabilityScore}
                             </p>

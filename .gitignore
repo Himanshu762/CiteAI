@@ -14,6 +14,10 @@ dist
 dist-ssr
 *.local
 
+# Build and test output
+coverage
+*.tsbuildinfo
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -25,8 +29,16 @@ dist-ssr
 *.sln
 *.sw?
 
+# Environment files hold API keys; only the template is committed
 *.env
-*.env.example
+.env.*
+!.env.example
 frontend/*.env
+frontend/*.env.example
+# Vercel CLI project link (vercel link / vercel dev)
+.vercel
+
+# Dev proxy server stores provider API keys here
+frontend/server/providers.json
 
 flutter_app

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Settings, FileText, Sparkles } from 'lucide-react';
+import { Menu, X, Settings, Sparkles } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { UserMenu } from '../auth/UserMenu';
 import { Logo } from '../ui/components';
@@ -35,7 +35,7 @@ const MobileMenu = ({ isOpen, onClose, currentPath, isSignedIn }: { isOpen: bool
         <nav className="space-y-2">
           <NavLink to="/" isActive={currentPath === '/'} onClick={onClose}>Home</NavLink>
           <NavLink to="/features" isActive={currentPath === '/features'} onClick={onClose}>Features</NavLink>
-          <NavLink to="/generate" isActive={currentPath === '/generate'} onClick={onClose}>Generate</NavLink>
+          <NavLink to="/" isActive={false} onClick={onClose}>New Paper</NavLink>
           <NavLink to="/dashboard" isActive={currentPath === '/dashboard'} onClick={onClose}>Dashboard</NavLink>
         </nav>
 
@@ -87,7 +87,7 @@ export const DashboardNavbar = () => {
             <nav className="hidden md:flex items-center gap-1">
               <NavLink to="/" isActive={location.pathname === '/'}>Home</NavLink>
               <NavLink to="/features" isActive={location.pathname === '/features'}>Features</NavLink>
-              <NavLink to="/generate" isActive={location.pathname === '/generate'}>Generate</NavLink>
+              <NavLink to="/" isActive={false}>New Paper</NavLink>
               <NavLink to="/dashboard" isActive={location.pathname === '/dashboard'}>Dashboard</NavLink>
             </nav>
 

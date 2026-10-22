@@ -177,10 +177,8 @@ function applySynonymRotation(
 
     for (const [word, synonyms] of Object.entries(EXTENDED_SYNONYMS)) {
         const regex = new RegExp(`\\b${word}\\b`, 'gi');
-        let matchCount = 0;
 
         result = result.replace(regex, (match) => {
-            matchCount++;
             // Replace based on rate
             if (Math.random() < replacementRate) {
                 const synonym = synonyms[Math.floor(Math.random() * synonyms.length)];

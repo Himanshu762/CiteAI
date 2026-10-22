@@ -4,7 +4,7 @@ import {
     Cpu, CheckCircle, XCircle, Loader2, RefreshCw,
     Zap, Clock, Brain, ChevronDown
 } from 'lucide-react';
-import { getModelsWithStatus, ModelInfo, checkModelStatus } from '../../services/model-status';
+import { getModelsWithStatus, ModelInfo } from '../../services/model-status';
 import { Badge } from '../ui/components';
 
 interface ModelSelectorProps {

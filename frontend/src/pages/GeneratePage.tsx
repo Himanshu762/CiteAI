@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     FileText, Settings2, Sparkles, Loader2, AlertTriangle,
-    BookOpen, Database, Download, CheckCircle, RefreshCw,
+    BookOpen, Database, Download, CheckCircle,
     ChevronRight, ChevronLeft
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { DashboardNavbar } from '../components/navigation/Navigation';
-import { Button, Input } from '../components/ui/components';
+import { Button } from '../components/ui/components';
 import { StreamingPaperViewer } from '../components/Paper/StreamingPaperViewer';
 import { SectionSelector } from '../components/Paper/SectionSelector';
 import { ReferencesPanel } from '../components/Research/ReferencesPanel';
@@ -72,7 +72,6 @@ export default function GeneratePage() {
                 topic: topic.trim(),
                 wordLimit,
                 sections: selectedSections,
-                model: selectedModel,
                 researchContext: paperContext,
                 onProgress: (progress) => {
                     setGenerationProgress(progress);
@@ -86,7 +85,7 @@ export default function GeneratePage() {
                 onToken: (sectionId, token) => {
                     appendToSection(sectionId, token);
                 },
-                onComplete: (sections) => {
+                onComplete: () => {
                     toast.success('Paper generated successfully!', { id: 'section-progress' });
                 },
                 onError: (error) => {

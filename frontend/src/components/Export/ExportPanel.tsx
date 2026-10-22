@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Download, FileText, FileCheck, Settings, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { Button } from '../ui/components';
 import { PaperSection } from '../../services/paper-generator';
 import { exportAndDownload } from '../../services/export-service';
 import { usePaperStore } from '../../lib/store/use-paper-store';

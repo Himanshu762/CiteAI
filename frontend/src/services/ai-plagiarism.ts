@@ -1,13 +1,13 @@
 /**
  * AI Plagiarism Service
- * Uses Gemini API for:
+ * Uses the AI gateway for:
  * 1. Originality detection - analyzing text patterns and uniqueness
  * 2. Auto-paraphrasing - rewrites flagged passages to improve originality
  * 
- * Using free Gemini API - no rate limit issues
+ * Scores are an AI estimate of writing originality, not a match against published sources.
  */
 
-import { geminiCompletion, GEMINI_MODELS } from './gemini-api';
+import { completeLLM, streamLLM } from './llm';
 
 export interface OriginalityResult {
     overallScore: number; // 0-100 (100 = fully original)
@@ -32,7 +32,8 @@ export interface ParaphraseResult {
 }
 
 /**
- * Analyze text for originality using AI
+ * Estimate originality using AI review of the writing.
+ * This is NOT a plagiarism database check: nothing is compared against published sources.
  */
 export async function analyzeOriginality(
     text: string,
@@ -52,43 +53,46 @@ export async function analyzeOriginality(
         };
     }
 
-    // Analyze each paragraph
+    // Several paragraphs per request keeps a full paper within the free-tier rate limit
     const passages: PassageAnalysis[] = [];
-    let totalScore = 0;
     let currentIndex = 0;
+    const batchCount = Math.ceil(paragraphs.length / PASSAGES_PER_REQUEST);
 
-    for (let i = 0; i < paragraphs.length; i++) {
-        const paragraph = paragraphs[i];
-        const startIndex = text.indexOf(paragraph, currentIndex);
-        currentIndex = startIndex + paragraph.length;
+    for (let b = 0; b < batchCount; b++) {
+        const batch = paragraphs.slice(b * PASSAGES_PER_REQUEST, (b + 1) * PASSAGES_PER_REQUEST);
+        onProgress?.(`Analyzing passages (batch ${b + 1}/${batchCount})...`);
 
-        onProgress?.(`Analyzing paragraph ${i + 1}/${paragraphs.length}...`);
-
+        let scores: { score: number; issues: string[] }[] = [];
         try {
-            const analysis = await analyzePassage(paragraph);
-            passages.push({
-                text: paragraph.slice(0, 200) + (paragraph.length > 200 ? '...' : ''),
-                startIndex,
-                endIndex: startIndex + paragraph.length,
-                originalityScore: analysis.score,
-                issues: analysis.issues,
-            });
-            totalScore += analysis.score;
+            scores = await analyzePassages(batch);
         } catch (error) {
             console.error('Passage analysis failed:', error);
+        }
+
+        batch.forEach((paragraph, i) => {
+            const startIndex = text.indexOf(paragraph, currentIndex);
+            currentIndex = startIndex + paragraph.length;
+            const result = scores[i];
+            if (!result) return; // Unscored passages are left out rather than given a made-up score
             passages.push({
                 text: paragraph.slice(0, 200) + (paragraph.length > 200 ? '...' : ''),
                 startIndex,
                 endIndex: startIndex + paragraph.length,
-                originalityScore: 85,
-                issues: [],
+                originalityScore: result.score,
+                issues: result.issues,
             });
-            totalScore += 85;
-        }
+        });
     }
 
-    const overallScore = Math.round(totalScore / paragraphs.length);
+    if (passages.length === 0) {
+        throw new Error('Originality analysis failed. Check your Gemini API key and rate limits, then try again.');
+    }
+
+    const overallScore = Math.round(passages.reduce((sum, p) => sum + p.originalityScore, 0) / passages.length);
     const suggestions = generateSuggestions(passages, overallScore);
+    if (passages.length < paragraphs.length) {
+        suggestions.unshift(`${paragraphs.length - passages.length} of ${paragraphs.length} passages could not be analyzed and are not included in the score`);
+    }
 
     onProgress?.('Analysis complete');
 
@@ -100,43 +104,44 @@ export async function analyzeOriginality(
     };
 }
 
+const PASSAGES_PER_REQUEST = 8;
+
 /**
- * Analyze a single passage for originality
+ * Score a batch of passages in one request; entries are undefined for passages the model skipped
  */
-async function analyzePassage(text: string): Promise<{ score: number; issues: string[] }> {
-    const prompt = `Analyze this academic text for originality and uniqueness. Rate it 0-100 (100 = fully original).
+async function analyzePassages(texts: string[]): Promise<{ score: number; issues: string[] }[]> {
+    const numbered = texts.map((t, i) => `[${i}]\n${t.slice(0, 1200)}`).join('\n\n');
+    const prompt = `Analyze each numbered academic passage for originality of writing. Rate each 0-100 (100 = fully original).
 
 Consider:
 1. Is it using common/clichéd phrases?
 2. Does it have a unique voice and perspective?
 3. Is the sentence structure varied?
-4. Does it appear to be AI-generated boilerplate?
+4. Does it read like generic boilerplate?
 
-Text:
+Passages:
 """
-${text.slice(0, 1500)}
+${numbered}
 """
 
-Respond ONLY with JSON:
-{"score": <number 0-100>, "issues": ["issue1", "issue2"]}`;
+Respond ONLY with a JSON array, one entry per passage:
+[{"index": 0, "score": <number 0-100>, "issues": ["issue1"]}]`;
 
-    try {
-        const result = await geminiCompletion(prompt, GEMINI_MODELS.FLASH);
+    const result = await completeLLM(prompt);
+    const jsonMatch = result.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('Unparseable originality response');
 
-        // Extract JSON from response
-        const jsonMatch = result.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            return {
-                score: Math.min(100, Math.max(0, parsed.score || 85)),
-                issues: Array.isArray(parsed.issues) ? parsed.issues : [],
-            };
-        }
-    } catch (error) {
-        console.error('AI analysis error:', error);
+    const parsed: { index?: number; score?: number; issues?: unknown }[] = JSON.parse(jsonMatch[0]);
+    const scores: { score: number; issues: string[] }[] = [];
+    for (const entry of parsed) {
+        if (typeof entry.index !== 'number' || typeof entry.score !== 'number') continue;
+        if (entry.index < 0 || entry.index >= texts.length) continue;
+        scores[entry.index] = {
+            score: Math.min(100, Math.max(0, Math.round(entry.score))),
+            issues: Array.isArray(entry.issues) ? entry.issues.filter((i): i is string => typeof i === 'string') : [],
+        };
     }
-
-    return { score: 85, issues: [] };
+    return scores;
 }
 
 /**
@@ -200,7 +205,7 @@ ${text}
 Provide ONLY the paraphrased text, nothing else.`;
 
     try {
-        const result = await geminiCompletion(prompt, GEMINI_MODELS.FLASH);
+        const result = await completeLLM(prompt);
 
         let paraphrased = result.trim();
         if (paraphrased.startsWith('"') && paraphrased.endsWith('"')) {
@@ -346,7 +351,6 @@ Text: "${text}"
 Paraphrased version:`;
 
     // Use Gemini streaming
-    const { streamGeminiCompletion } = await import('./gemini-api');
-    await streamGeminiCompletion(prompt, { onToken: onChunk });
+    await streamLLM(prompt, { onToken: onChunk });
 }
 

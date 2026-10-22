@@ -165,7 +165,6 @@ function removeAIPatterns(text: string): string {
 
     // Replace high-confidence AI phrases
     for (const pattern of AI_PATTERNS.highConfidence) {
-        const lowerPattern = pattern.toLowerCase();
         const regex = new RegExp(escapeRegex(pattern), 'gi');
 
         if (PHRASE_REPLACEMENTS[pattern]) {
@@ -316,7 +315,7 @@ function diversifySentenceStarters(text: string): string {
 
     // Find repeated starters
     const repeatedStarters = Array.from(starters.entries())
-        .filter(([_, count]) => count > 2)
+        .filter(([, count]) => count > 2)
         .map(([word]) => word);
 
     if (repeatedStarters.length === 0) return text;
@@ -439,7 +438,7 @@ function addPersonalVoice(text: string): string {
  */
 function breakRepetitivePatterns(text: string): string {
     // Add contractions
-    let result = text
+    const result = text
         .replace(/\bIt is\b/g, (_, offset) => offset % 100 < 30 ? "It's" : 'It is')
         .replace(/\bdo not\b/g, (_, offset) => offset % 100 < 30 ? "don't" : 'do not')
         .replace(/\bwill not\b/g, (_, offset) => offset % 100 < 30 ? "won't" : 'will not')

@@ -122,7 +122,7 @@ export const Input = ({
   );
 };
 
-export const Stepper = ({ steps, currentStep = 0, onChange = (s: number) => { } }: { steps: string[]; currentStep?: number; onChange?: (step: number) => void }) => (
+export const Stepper = ({ steps, currentStep = 0, onChange = () => { } }: { steps: string[]; currentStep?: number; onChange?: (step: number) => void }) => (
   <div className="flex items-center gap-2" role="tablist">
     {steps.map((s, idx) => (
       <button

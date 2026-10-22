@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Sparkles, Zap, Shield, FileText, TrendingUp } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useWizardStore } from '../../lib/store/use-wizard-store';
+import { useResearchStore } from '../../lib/store/use-research-store';
+import { useAuth } from '../../providers/auth-provider';
+import { DISCIPLINES } from '../../services/disciplines';
+import { UserMenu } from '../../components/auth/UserMenu';
 
 // Animated background particles
 const FloatingOrb = ({ delay, size, color, position }: { delay: number; size: number; color: string; position: { x: string; y: string } }) => (
@@ -31,7 +35,9 @@ const FloatingOrb = ({ delay, size, color, position }: { delay: number; size: nu
 
 export default function StartPage() {
     const navigate = useNavigate();
-    const { topic, setTopic, setStage } = useWizardStore();
+    const { topic, setTopic, setStage, fieldId, setFieldId } = useWizardStore();
+    const [field, setField] = useState(fieldId);
+    const { isSignedIn } = useAuth();
     const [inputValue, setInputValue] = useState(topic);
     const [isFocused, setIsFocused] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
@@ -48,7 +54,13 @@ export default function StartPage() {
 
     const handleStart = () => {
         if (!canStart) return;
-        setTopic(inputValue.trim());
+        const nextTopic = inputValue.trim();
+        if (nextTopic !== topic || field !== fieldId) {
+            // A new topic or field starts a new paper: drop the previous analysis and sources
+            setTopic(nextTopic);
+            setFieldId(field);
+            useResearchStore.getState().reset();
+        }
         setStage('research');
         navigate('/research');
     };
@@ -104,11 +116,15 @@ export default function StartPage() {
                         animate={{ opacity: 1, x: 0 }}
                         className="hidden md:flex items-center gap-8"
                     >
-                        <a href="#features" className="text-sm text-zinc-400 hover:text-white transition-colors">Features</a>
-                        <a href="#pricing" className="text-sm text-zinc-400 hover:text-white transition-colors">Pricing</a>
-                        <button className="text-sm px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
-                            Sign In
-                        </button>
+                        <Link to="/features" className="text-sm text-zinc-400 hover:text-white transition-colors">Features</Link>
+                        <Link to="/dashboard" className="text-sm text-zinc-400 hover:text-white transition-colors">My Papers</Link>
+                        {isSignedIn ? (
+                            <UserMenu />
+                        ) : (
+                            <Link to="/sign-in" className="text-sm px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors backdrop-blur-sm">
+                                Sign In
+                            </Link>
+                        )}
                     </motion.nav>
                 </div>
             </header>
@@ -176,8 +192,17 @@ export default function StartPage() {
                                     rows={2}
                                 />
 
-                                <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800">
+                                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-zinc-800">
                                     <div className="flex items-center gap-3">
+                                        <select
+                                            value={field}
+                                            onChange={(e) => setField(e.target.value)}
+                                            aria-label="Field of study"
+                                            className="max-w-[14rem] rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-zinc-300 focus:border-blue-500 focus:outline-none"
+                                        >
+                                            <option value="">Any field</option>
+                                            {DISCIPLINES.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                        </select>
                                         <AnimatePresence>
                                             {isTyping && (
                                                 <motion.div
@@ -259,7 +284,7 @@ export default function StartPage() {
                             { value: '∞', label: 'Free Checks' },
                             { value: '98%', label: 'Originality' },
                             { value: '4.9/5', label: 'User Rating' },
-                        ].map((stat, i) => (
+                        ].map((stat) => (
                             <div key={stat.label} className="text-center">
                                 <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                                     {stat.value}

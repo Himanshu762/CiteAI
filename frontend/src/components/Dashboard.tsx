@@ -1,23 +1,7 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '../components/Dashboard/Layout';
-import { FileText, TrendingUp, Clock, Award, FilePlus } from 'lucide-react';
+import { FileText, FilePlus } from 'lucide-react';
 import { Button, PageHeader } from '../components/ui/components';
-
-const StatsCard = ({ title, value, icon, trend }: { title: string, value: string | number, icon: React.ReactNode, trend?: number }) => (
-  <div className="bg-card border-2 border-border p-6 rounded-lg shadow-lg transition-all duration-300 hover:border-gold-leaf/50 hover:bg-ink">
-    <div className="flex justify-between items-start mb-4">
-      <span className="font-serif text-lg font-semibold text-muted-ink">{title}</span>
-      <div className="p-2 bg-gold-leaf/10 rounded-md text-gold-leaf">{icon}</div>
-    </div>
-    <div className="text-4xl font-bold text-parchment mb-1">{value}</div>
-    {trend !== undefined && (
-      <div className={`flex items-center text-sm ${trend >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-        {trend >= 0 ? '▲' : '▼'} {Math.abs(trend)}% vs. last month
-      </div>
-    )}
-  </div>
-);
 
 export default function DashboardPage() {
   const navigate = useNavigate();

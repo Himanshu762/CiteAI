@@ -1,20 +1,49 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Download, Shield, Bot, Loader2, Check, Copy, ArrowLeft, ChevronDown, Sparkles, CheckCircle, AlertTriangle } from 'lucide-react';
+import { FileText, Download, Shield, Bot, Loader2, Copy, ArrowLeft, ChevronDown, Sparkles, CheckCircle, BookOpen, Wand2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWizardStore } from '../../lib/store/use-wizard-store';
 import { usePaperStore } from '../../lib/store/use-paper-store';
+import { useResearchStore } from '../../lib/store/use-research-store';
 import { analyzeOriginality } from '../../services/ai-plagiarism';
 import { analyzeAIRisk, humanizeText, HumanizationLevel } from '../../services/ai-humanizer';
-import { exportAndDownload } from '../../services/export-service';
 import toast from 'react-hot-toast';
+import { ReportTableView } from '../../components/analysis/ReportTableView';
+import { TitlePageForm } from '../../components/Export/TitlePageForm';
+import { CitationFinder } from '../../components/Paper/CitationFinder';
+import { StyleCleanupPanel } from '../../components/Paper/StyleCleanupPanel';
+import { disciplineName } from '../../services/disciplines';
+import { parseRuns, stripItalics } from '../../services/export/layout';
+import { CITATION_STYLES, CitationStyle } from '../../services/citation-formatter';
+import type { ExportFormat, ReferenceFileFormat } from '../../services/export-service';
+
+const PAPER_FORMATS: { id: ExportFormat; label: string }[] = [
+    { id: 'pdf', label: 'PDF' },
+    { id: 'docx', label: 'Word (.docx)' },
+    { id: 'markdown', label: 'Markdown (.md)' },
+    { id: 'latex', label: 'LaTeX (.tex + .bib)' },
+];
+
+const REFERENCE_FORMATS: { id: ReferenceFileFormat; label: string }[] = [
+    { id: 'bib', label: 'BibTeX (.bib)' },
+    { id: 'ris', label: 'RIS (Zotero, EndNote)' },
+    { id: 'json', label: 'CSL-JSON' },
+];
+
+/** Render *italic* markers (used in reference entries) */
+const RichText = ({ text }: { text: string }) => (
+    <>{parseRuns(text).map((r, i) => (r.italic ? <em key={i}>{r.text}</em> : <span key={i}>{r.text}</span>))}</>
+);
 
 export default function FinishPage() {
     const navigate = useNavigate();
-    const { reset: resetWizard, topic } = useWizardStore();
-    const { currentPaper } = usePaperStore();
+    const { reset: resetWizard, topic, fieldId } = useWizardStore();
+    const { currentPaper, setCurrentPaper, updatePaper, exportConfig, setExportConfig } = usePaperStore();
+    const style = currentPaper?.citationStyle ?? 'apa';
+    const sources = currentPaper?.sources ?? [];
+    const datasets = currentPaper?.datasets ?? [];
 
-    const [activeTab, setActiveTab] = useState<'preview' | 'plagiarism' | 'humanize'>('preview');
+    const [activeTab, setActiveTab] = useState<'preview' | 'sources' | 'style' | 'plagiarism' | 'humanize'>('preview');
     const [isCheckingPlagiarism, setIsCheckingPlagiarism] = useState(false);
     const [plagiarismScore, setPlagiarismScore] = useState<number | null>(null);
     const [aiRisk, setAiRisk] = useState<string | null>(null);
@@ -34,13 +63,17 @@ export default function FinishPage() {
     const handleCheckPlagiarism = async () => {
         setIsCheckingPlagiarism(true);
         try {
-            const result = await analyzeOriginality(allContent);
+            const prose = currentPaper?.sections
+                .filter(s => s.id !== 'references')
+                .map(s => s.content)
+                .join('\n\n') || '';
+            const result = await analyzeOriginality(prose);
             setPlagiarismScore(result.overallScore);
             const risk = await analyzeAIRisk(allContent);
             setAiRisk(risk.risk);
             toast.success('Analysis complete');
         } catch (error) {
-            toast.error('Check failed');
+            toast.error(error instanceof Error ? error.message : 'Check failed');
         } finally {
             setIsCheckingPlagiarism(false);
         }
@@ -52,34 +85,51 @@ export default function FinishPage() {
             await humanizeText(allContent, level);
             toast.success('Text humanized');
             setAiRisk('low');
-        } catch (error) {
+        } catch {
             toast.error('Humanization failed');
         } finally {
             setIsHumanizing(false);
         }
     };
 
-    const handleExport = async (format: 'pdf' | 'docx') => {
+    const handleExport = async (format: ExportFormat) => {
         if (!currentPaper) return;
         setShowExportMenu(false);
         try {
+            // PDF and Word libraries are large; load them only when exporting
+            const { exportAndDownload } = await import('../../services/export-service');
             await exportAndDownload(currentPaper.sections, {
                 format,
                 title: currentPaper.topic,
+                style,
+                titlePage: exportConfig.titlePage,
+                references: sources,
+                datasets,
             });
-            toast.success(`Exported as ${format.toUpperCase()}`);
+            toast.success(`Exported ${PAPER_FORMATS.find(f => f.id === format)?.label ?? format}`);
         } catch (error) {
+            console.error('Export failed:', error);
             toast.error('Export failed');
         }
     };
 
+    const handleReferences = async (format: ReferenceFileFormat) => {
+        if (!currentPaper) return;
+        setShowExportMenu(false);
+        const { downloadReferences } = await import('../../services/export-service');
+        downloadReferences(format, currentPaper.topic, sources, datasets);
+    };
+
     const handleCopy = () => {
-        navigator.clipboard.writeText(allContent);
+        const text = currentPaper?.sections.map(s => `${s.title}\n\n${stripItalics(s.content)}`).join('\n\n') ?? '';
+        navigator.clipboard.writeText(text);
         toast.success('Copied to clipboard');
     };
 
     const handleNewPaper = () => {
         resetWizard();
+        useResearchStore.getState().reset();
+        setCurrentPaper(null);
         navigate('/');
     };
 
@@ -89,6 +139,8 @@ export default function FinishPage() {
 
     const tabs = [
         { id: 'preview' as const, label: 'Preview', icon: FileText },
+        { id: 'sources' as const, label: 'Sources', icon: BookOpen },
+        { id: 'style' as const, label: 'Style', icon: Wand2 },
         { id: 'plagiarism' as const, label: 'Originality', icon: Shield },
         { id: 'humanize' as const, label: 'AI Check', icon: Bot },
     ];
@@ -135,17 +187,32 @@ export default function FinishPage() {
                             <motion.div
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="absolute right-0 mt-2 w-40 bg-zinc-900 rounded-xl border border-zinc-800 py-2 shadow-xl z-10"
+                                className="absolute right-0 mt-2 w-56 bg-zinc-900 rounded-xl border border-zinc-800 py-2 shadow-xl z-10"
                             >
-                                {(['pdf', 'docx'] as const).map(format => (
+                                <div className="px-4 pb-1 pt-1 text-xs uppercase tracking-wide text-zinc-500">Paper ({CITATION_STYLES[style].label})</div>
+                                {PAPER_FORMATS.map(format => (
                                     <button
-                                        key={format}
-                                        onClick={() => handleExport(format)}
+                                        key={format.id}
+                                        onClick={() => handleExport(format.id)}
                                         className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
                                     >
-                                        {format.toUpperCase()}
+                                        {format.label}
                                     </button>
                                 ))}
+                                {(sources.length > 0 || datasets.length > 0) && (
+                                    <>
+                                        <div className="mt-1 border-t border-zinc-800 px-4 pb-1 pt-2 text-xs uppercase tracking-wide text-zinc-500">References</div>
+                                        {REFERENCE_FORMATS.map(format => (
+                                            <button
+                                                key={format.id}
+                                                onClick={() => handleReferences(format.id)}
+                                                className="w-full px-4 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
+                                            >
+                                                {format.label}
+                                            </button>
+                                        ))}
+                                    </>
+                                )}
                             </motion.div>
                         )}
                     </div>
@@ -168,9 +235,36 @@ export default function FinishPage() {
                         {topic}
                     </h1>
                     <p className="text-zinc-400">
-                        {totalWords.toLocaleString()} words • {currentPaper.sections.length} sections
+                        {totalWords.toLocaleString()} words • {currentPaper.sections.length} sections • {CITATION_STYLES[style].label}
                     </p>
                 </motion.div>
+
+                {currentPaper.origin === 'imported' && (
+                    <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-zinc-400">
+                        <span>Format as</span>
+                        {(Object.keys(CITATION_STYLES) as CitationStyle[]).map(s => (
+                            <button
+                                key={s}
+                                onClick={() => updatePaper(currentPaper.id, {
+                                    citationStyle: s,
+                                    // The reference heading follows the style; in-text citations stay as written
+                                    sections: currentPaper.sections.map(sec => sec.id === 'references' ? { ...sec, title: CITATION_STYLES[s].referencesTitle } : sec),
+                                    updatedAt: new Date(),
+                                })}
+                                className={`rounded-lg border px-3 py-1 ${style === s ? 'border-blue-500/50 bg-blue-500/20 text-white' : 'border-zinc-800 hover:border-zinc-700'}`}
+                            >
+                                {CITATION_STYLES[s].label}
+                            </button>
+                        ))}
+                        <span className="text-xs text-zinc-500">Changes layout and the reference heading; your in-text citations are kept as written.</span>
+                    </div>
+                )}
+
+                <TitlePageForm
+                    style={style}
+                    value={exportConfig.titlePage}
+                    onChange={titlePage => setExportConfig({ titlePage })}
+                />
 
                 {/* Tabs */}
                 <div className="flex gap-1 mb-6 bg-zinc-900/50 p-1 rounded-xl border border-zinc-800">
@@ -214,9 +308,12 @@ export default function FinishPage() {
                                         <h2 className="text-xl font-bold text-white mb-4">
                                             {section.title}
                                         </h2>
-                                        <div className="text-zinc-300 whitespace-pre-wrap leading-relaxed text-sm">
-                                            {section.content}
+                                        <div className={`text-zinc-300 whitespace-pre-wrap leading-relaxed text-sm ${section.id === 'references' ? 'space-y-2' : ''}`}>
+                                            <RichText text={section.content} />
                                         </div>
+                                        {section.tables?.map((table, t) => (
+                                            <ReportTableView key={t} table={table} number={t + 1} />
+                                        ))}
                                         <div className="mt-3 text-xs text-zinc-500">
                                             {section.wordCount} words
                                         </div>
@@ -224,6 +321,39 @@ export default function FinishPage() {
                                 ))}
                             </div>
                         </div>
+                    )}
+
+                    {activeTab === 'sources' && (
+                        <CitationFinder
+                            paper={{
+                                sections: currentPaper.sections,
+                                sources,
+                                datasets,
+                                citationStyle: style,
+                                origin: currentPaper.origin ?? 'generated',
+                            }}
+                            fieldId={fieldId || undefined}
+                            discipline={disciplineName(fieldId)}
+                            onUpdate={(sections, nextSources) => updatePaper(currentPaper.id, {
+                                sections,
+                                sources: nextSources,
+                                totalWordCount: sections.reduce((n, sec) => n + sec.wordCount, 0),
+                                updatedAt: new Date(),
+                            })}
+                        />
+                    )}
+
+                    {activeTab === 'style' && (
+                        <StyleCleanupPanel
+                            sections={currentPaper.sections}
+                            dashStyle={exportConfig.dashStyle}
+                            onDashStyleChange={dashStyle => setExportConfig({ dashStyle })}
+                            onApply={sections => updatePaper(currentPaper.id, {
+                                sections,
+                                totalWordCount: sections.reduce((n, sec) => n + sec.wordCount, 0),
+                                updatedAt: new Date(),
+                            })}
+                        />
                     )}
 
                     {activeTab === 'plagiarism' && (
@@ -242,9 +372,10 @@ export default function FinishPage() {
                                         Originality Score
                                     </h3>
                                     <p className="text-zinc-400 max-w-md mx-auto">
-                                        {plagiarismScore >= 90 ? 'Excellent! Your paper is highly original and ready for submission.' :
-                                            plagiarismScore >= 70 ? 'Good originality, but consider rephrasing some sections for better results.' :
-                                                'Consider revising your paper to improve originality before submission.'}
+                                        {plagiarismScore >= 90 ? 'The writing reads as distinctive rather than boilerplate.' :
+                                            plagiarismScore >= 70 ? 'Some passages read as generic; consider revising them in your own words.' :
+                                                'Much of the writing reads as generic; revise it in your own words.'}
+                                        {' '}This is an AI estimate of writing originality, not a plagiarism database check.
                                     </p>
                                     <button
                                         onClick={handleCheckPlagiarism}
@@ -262,7 +393,7 @@ export default function FinishPage() {
                                         Check Originality
                                     </h3>
                                     <p className="text-zinc-400 mb-6 max-w-sm mx-auto">
-                                        Analyze your paper for potential plagiarism issues
+                                        Get an AI estimate of how distinctive the writing is. This does not compare your paper against published sources.
                                     </p>
                                     <button
                                         onClick={handleCheckPlagiarism}
